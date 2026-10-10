@@ -1,0 +1,14 @@
+{
+  "name": "studimate/studimate2",
+  "description": "Studimate study application",
+  "license": "proprietary",
+  "require": {
+    "php": ">=8.1",
+    "ext-zip": "*",
+    "smalot/pdfparser": "^2.11"
+  },
+  "config": {
+    "platform-check": true,
+    "sort-packages": true
+  }
+}
