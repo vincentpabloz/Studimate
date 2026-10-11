@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Symfony Polyfill / Mbstring
 ===========================
 
@@ -11,3 +12,6 @@ License
 =======
 
 This library is released under the [MIT license](LICENSE).
+=======
+# Studimate
+>>>>>>> 56c7c2151a3dd7fe0ab32c95200c8b5afa30360c
