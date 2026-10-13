@@ -142,8 +142,6 @@ $lessons=$pdo->prepare("
   FROM lessons l WHERE l.subject_id=? ORDER BY l.uploaded_at DESC
 ");
 $lessons->execute([$uid,$uid,$sid]);$lessonList=$lessons->fetchAll();
-$documents=$pdo->prepare('SELECT d.id,d.original_filename,d.file_type,d.created_at,l.title FROM documents d LEFT JOIN lessons l ON l.id=d.lesson_id WHERE d.user_id=? AND d.subject_id=? ORDER BY d.created_at DESC');
-$documents->execute([$uid,$sid]);$documentList=$documents->fetchAll();
 
 // Compute subject progress
 $doneCount=count(array_filter($lessonList,fn($l)=>$l['attempts']>0));
@@ -170,7 +168,7 @@ $topbarTitle=htmlspecialchars($sub['subject_name']);
     <div class="subject-hero-bar">
       <div class="subject-hero-fill" style="width:<?=$pct?>%"></div>
     </div>
-    <div class="subject-hero-icon"><?=htmlspecialchars($sub['icon']??'📘')?></div>
+    <div class="subject-hero-icon"><i data-lucide="book-open" aria-hidden="true"></i></div>
   </div>
 
   <!-- ADD LESSON BUTTON -->
@@ -195,8 +193,7 @@ $topbarTitle=htmlspecialchars($sub['subject_name']);
   <div class="alert alert-warning"><i class="fas fa-clone"></i>Possible meaning-based duplicate: <strong><?=htmlspecialchars($similarLesson['title'])?></strong> (<?=number_format($similarLesson['similarity']*100,1)?>% similar). Similarity is only a suggestion; related ideas are not merged automatically.</div>
   <div class="flex gap-2 flex-wrap mb-4">
     <?php foreach(['reuse'=>'Reuse existing lesson','separate'=>'Save as separate lesson'] as $action=>$label):?>
-        <form method="POST" action="lessons.php?subject_id=<?=$sid?>" enctype="multipart/form-data"
-              onsubmit="const material=this.elements.material;if(material&&material.files.length){this.action='upload_document.php'}">
+        <form method="POST" action="lessons.php?subject_id=<?=$sid?>">
       <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($csrfToken)?>">
           <input type="hidden" name="subject_id" value="<?=$sid?>">
       <input type="hidden" name="pending_token" value="<?=htmlspecialchars($pendingLesson['token'])?>">
@@ -261,30 +258,6 @@ $topbarTitle=htmlspecialchars($sub['subject_name']);
     </div>
   </div>
 
-  <div class="card mb-6">
-    <div class="card-header"><h3>Upload study material</h3><span class="text-xs text-muted">PDF, DOCX, PPT, PPTX · 20 MB max</span></div>
-    <div class="card-body">
-      <form method="POST" action="upload_document.php" enctype="multipart/form-data" class="flex items-center gap-3 flex-wrap">
-        <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($csrfToken)?>">
-        <input type="hidden" name="subject_id" value="<?=$sid?>">
-        <input type="file" name="material" accept=".pdf,.docx,.ppt,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" required>
-        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-upload"></i> Upload and extract</button>
-      </form>
-      <?php if($documentList):?>
-      <div class="document-list mt-4">
-        <?php foreach($documentList as $document):?>
-        <div class="document-row">
-          <i class="fas fa-file-alt text-primary"></i>
-          <span><strong><?=htmlspecialchars($document['original_filename'])?></strong><small><?=htmlspecialchars($document['title']??'No linked lesson')?> · <?=strtoupper(htmlspecialchars($document['file_type']))?></small></span>
-          <a class="btn btn-outline btn-xs" href="download_document.php?id=<?=(int)$document['id']?>" title="Download original"><i class="fas fa-download"></i></a>
-        </div>
-        <?php endforeach;?>
-      </div>
-      <?php endif;?>
-      <p class="text-xs text-muted mt-4">Uploads are stored privately. Saving a document does not call AI; select a study output separately.</p>
-    </div>
-  </div>
-
 </div>
 
 <!-- ADD LESSON MODAL -->
@@ -337,7 +310,8 @@ $topbarTitle=htmlspecialchars($sub['subject_name']);
   </div>
 </div>
 
+<script src="https://unpkg.com/lucide@1.56.0"></script>
 <?php
-$extraJs=$editLesson?"document.addEventListener('DOMContentLoaded',()=>openModal('addLessonModal'));":'';
+$extraJs="lucide.createIcons();".($editLesson?"document.addEventListener('DOMContentLoaded',()=>openModal('addLessonModal'));":'');
 include '../includes/footer.php';
 ?>
