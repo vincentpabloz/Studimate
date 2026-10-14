@@ -13,7 +13,7 @@ $subjectId = (int)($_POST['subject_id'] ?? 0);
 $storageRoot = getenv('STUDIMATE_PRIVATE_STORAGE') ?: dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'studimate-private-storage';
 $storedPath = null;
 
-function uploadError(string $message, int $subjectId): never
+function uploadError(string $message, int $subjectId)
 {
     $_SESSION['upload_error'] = $message;
     header('Location: lessons.php?subject_id=' . $subjectId);

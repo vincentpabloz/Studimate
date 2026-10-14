@@ -261,30 +261,6 @@ $topbarTitle=htmlspecialchars($sub['subject_name']);
     </div>
   </div>
 
-  <div class="card mb-6">
-    <div class="card-header"><h3>Upload study material</h3><span class="text-xs text-muted">PDF, DOCX, PPT, PPTX · 20 MB max</span></div>
-    <div class="card-body">
-      <form method="POST" action="upload_document.php" enctype="multipart/form-data" class="flex items-center gap-3 flex-wrap">
-        <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($csrfToken)?>">
-        <input type="hidden" name="subject_id" value="<?=$sid?>">
-        <input type="file" name="material" accept=".pdf,.docx,.ppt,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" required>
-        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-upload"></i> Upload and extract</button>
-      </form>
-      <?php if($documentList):?>
-      <div class="document-list mt-4">
-        <?php foreach($documentList as $document):?>
-        <div class="document-row">
-          <i class="fas fa-file-alt text-primary"></i>
-          <span><strong><?=htmlspecialchars($document['original_filename'])?></strong><small><?=htmlspecialchars($document['title']??'No linked lesson')?> · <?=strtoupper(htmlspecialchars($document['file_type']))?></small></span>
-          <a class="btn btn-outline btn-xs" href="download_document.php?id=<?=(int)$document['id']?>" title="Download original"><i class="fas fa-download"></i></a>
-        </div>
-        <?php endforeach;?>
-      </div>
-      <?php endif;?>
-      <p class="text-xs text-muted mt-4">Uploads are stored privately. Saving a document does not call AI; select a study output separately.</p>
-    </div>
-  </div>
-
 </div>
 
 <!-- ADD LESSON MODAL -->
@@ -294,8 +270,10 @@ $topbarTitle=htmlspecialchars($sub['subject_name']);
       <h3><?=$editLesson?'Edit Lesson':'Add Lesson'?></h3>
       <button class="modal-close" onclick="closeModal('addLessonModal')"><i class="fas fa-times"></i></button>
     </div>
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data"
+          onsubmit="const material=this.elements.material;if(material&&material.files.length){this.setAttribute('action','upload_document.php')}">
       <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($csrfToken)?>">
+      <input type="hidden" name="subject_id" value="<?=$sid?>">
       <?php if($editLesson):?>
       <input type="hidden" name="action" value="update_lesson">
       <input type="hidden" name="lesson_id" value="<?=(int)$editLesson['id']?>">
@@ -310,11 +288,11 @@ $topbarTitle=htmlspecialchars($sub['subject_name']);
                placeholder="e.g. Chapter 1: Introduction to Arrays" required maxlength="200" value="<?=htmlspecialchars($editLesson['title']??'')?>">
         </div>
         <div class="form-group">
-          <label>Lesson Content *
-            <span style="color:var(--text-light);font-weight:400;font-size:0.72rem">(paste your notes or lesson text)</span>
+          <label>Lesson Content<?=$editLesson?' *':''?>
+            <span style="color:var(--text-light);font-weight:400;font-size:0.72rem"><?=$editLesson?'(paste your notes or lesson text)':'(paste notes, or leave empty if you attach a file)'?></span>
           </label>
           <textarea name="raw_text" class="form-control" rows="7"
-                    placeholder="Paste lesson content here. You can request an explanation, quiz, or flashcards separately after saving." required><?=htmlspecialchars($editLesson['raw_text']??'')?></textarea>
+                    placeholder="Paste lesson content here, or leave this empty and attach a file below. You can request an explanation, quiz, or flashcards separately after saving." <?=$editLesson?'required':''?>><?=htmlspecialchars($editLesson['raw_text']??'')?></textarea>
           <div style="font-size:0.7rem;color:var(--text-light);margin-top:4px">
             <i class="fas fa-info-circle"></i> <?= $editLesson ? 'Changes create a new source version; cached outputs for older versions remain available only as history.' : 'Exact duplicate content already stored in your account will be reused.' ?>
           </div>
