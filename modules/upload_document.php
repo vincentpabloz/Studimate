@@ -134,9 +134,9 @@ try {
         }
     }
 
-    $duplicate = $pdo->prepare('SELECT l.id,l.title FROM lessons l JOIN subjects s ON s.id=l.subject_id WHERE s.user_id=? AND l.normalized_content_hash=? ORDER BY l.id LIMIT 1');
+    $duplicate = $pdo->prepare('SELECT l.id,l.title FROM lessons l JOIN subjects s ON s.id=l.subject_id WHERE l.subject_id=? AND s.user_id=? AND l.normalized_content_hash=? ORDER BY l.id LIMIT 1');
     $duplicateContentHash = $typedText !== '' ? $lessonSourceHashes['normalized_content_hash'] : $documentContentHash;
-    $duplicate->execute([$uid, $duplicateContentHash]);
+    $duplicate->execute([$subjectId, $uid, $duplicateContentHash]);
     $existingLesson = $duplicate->fetch() ?: null;
     $lessonId = $existingLesson ? (int)$existingLesson['id'] : null;
 
@@ -153,8 +153,8 @@ try {
     $newKnowledge = $partition['chunks'];
     $novelText = $partition['novel_content'];
     if ($lessonId === null && $novelText === '' && !empty($newKnowledge)) {
-        $knownLesson = $pdo->prepare('(SELECT l.id,l.title FROM lesson_chunks lc JOIN lessons l ON l.id=lc.lesson_id JOIN subjects s ON s.id=l.subject_id JOIN knowledge_chunks kc ON kc.id=lc.knowledge_chunk_id WHERE s.user_id=? AND kc.content_hash=? ORDER BY lc.id LIMIT 1) UNION ALL (SELECT l.id,l.title FROM document_chunks dc JOIN documents d ON d.id=dc.document_id JOIN lessons l ON l.id=d.lesson_id JOIN knowledge_chunks kc ON kc.id=dc.knowledge_chunk_id WHERE d.user_id=? AND kc.content_hash=? ORDER BY dc.id LIMIT 1) LIMIT 1');
-        $knownLesson->execute([$uid, $newKnowledge[0]['hash'], $uid, $newKnowledge[0]['hash']]);
+        $knownLesson = $pdo->prepare('(SELECT l.id,l.title FROM lesson_chunks lc JOIN lessons l ON l.id=lc.lesson_id JOIN subjects s ON s.id=l.subject_id JOIN knowledge_chunks kc ON kc.id=lc.knowledge_chunk_id WHERE l.subject_id=? AND s.user_id=? AND kc.content_hash=? ORDER BY lc.id LIMIT 1) UNION ALL (SELECT l.id,l.title FROM document_chunks dc JOIN documents d ON d.id=dc.document_id JOIN lessons l ON l.id=d.lesson_id JOIN knowledge_chunks kc ON kc.id=dc.knowledge_chunk_id WHERE d.subject_id=? AND d.user_id=? AND kc.content_hash=? ORDER BY dc.id LIMIT 1) LIMIT 1');
+        $knownLesson->execute([$subjectId, $uid, $newKnowledge[0]['hash'], $subjectId, $uid, $newKnowledge[0]['hash']]);
         $existingLesson = $knownLesson->fetch() ?: null;
         if ($existingLesson) {
             $lessonId = (int)$existingLesson['id'];

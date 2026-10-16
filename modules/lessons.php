@@ -142,8 +142,6 @@ $lessons=$pdo->prepare("
   FROM lessons l WHERE l.subject_id=? ORDER BY l.uploaded_at DESC
 ");
 $lessons->execute([$uid,$uid,$sid]);$lessonList=$lessons->fetchAll();
-$documents=$pdo->prepare('SELECT d.id,d.original_filename,d.file_type,d.created_at,l.title FROM documents d LEFT JOIN lessons l ON l.id=d.lesson_id WHERE d.user_id=? AND d.subject_id=? ORDER BY d.created_at DESC');
-$documents->execute([$uid,$sid]);$documentList=$documents->fetchAll();
 
 // Compute subject progress
 $doneCount=count(array_filter($lessonList,fn($l)=>$l['attempts']>0));
@@ -151,9 +149,9 @@ $pct=count($lessonList)>0?round(($doneCount/count($lessonList))*100):0;
 $avgAll=count($lessonList)>0?round(array_sum(array_column($lessonList,'avg_score'))/max(1,count(array_filter($lessonList,fn($l)=>$l['avg_score']>0)))):0;
 
 $pageTitle=htmlspecialchars($sub['subject_name']).' – StudiMate';
+$topbarTitle=htmlspecialchars($sub['subject_name']);
 include '../includes/header.php';
 include '../includes/sidebar.php';
-$topbarTitle=htmlspecialchars($sub['subject_name']);
 ?>
 
 <div class="page-body">
@@ -170,7 +168,7 @@ $topbarTitle=htmlspecialchars($sub['subject_name']);
     <div class="subject-hero-bar">
       <div class="subject-hero-fill" style="width:<?=$pct?>%"></div>
     </div>
-    <div class="subject-hero-icon"><?=htmlspecialchars($sub['icon']??'📘')?></div>
+    <div class="subject-hero-icon"><i data-lucide="book-open" aria-hidden="true"></i></div>
   </div>
 
   <!-- ADD LESSON BUTTON -->
@@ -195,8 +193,7 @@ $topbarTitle=htmlspecialchars($sub['subject_name']);
   <div class="alert alert-warning"><i class="fas fa-clone"></i>Possible meaning-based duplicate: <strong><?=htmlspecialchars($similarLesson['title'])?></strong> (<?=number_format($similarLesson['similarity']*100,1)?>% similar). Similarity is only a suggestion; related ideas are not merged automatically.</div>
   <div class="flex gap-2 flex-wrap mb-4">
     <?php foreach(['reuse'=>'Reuse existing lesson','separate'=>'Save as separate lesson'] as $action=>$label):?>
-        <form method="POST" action="lessons.php?subject_id=<?=$sid?>" enctype="multipart/form-data"
-              onsubmit="const material=this.elements.material;if(material&&material.files.length){this.action='upload_document.php'}">
+        <form method="POST" action="lessons.php?subject_id=<?=$sid?>">
       <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($csrfToken)?>">
           <input type="hidden" name="subject_id" value="<?=$sid?>">
       <input type="hidden" name="pending_token" value="<?=htmlspecialchars($pendingLesson['token'])?>">
@@ -244,7 +241,7 @@ $topbarTitle=htmlspecialchars($sub['subject_name']);
         <div style="display:flex;gap:6px;align-items:center">
             <a href="lessons.php?subject_id=<?=$sid?>&edit=<?=(int)$l['id']?>#editLessonModal"
              class="btn btn-outline btn-sm btn-pill" style="font-size:0.75rem">Edit</a>
-          <a href="ai_tools.php?lesson_id=<?=$l['id']?>&tab=explanation"
+          <a href="study.php?lesson_id=<?=(int)$l['id']?>"
              class="btn btn-accent-outline btn-sm btn-pill" style="font-size:0.75rem">
             Study
           </a>
@@ -270,8 +267,7 @@ $topbarTitle=htmlspecialchars($sub['subject_name']);
       <h3><?=$editLesson?'Edit Lesson':'Add Lesson'?></h3>
       <button class="modal-close" onclick="closeModal('addLessonModal')"><i class="fas fa-times"></i></button>
     </div>
-    <form method="POST" enctype="multipart/form-data"
-          onsubmit="const material=this.elements.material;if(material&&material.files.length){this.setAttribute('action','upload_document.php')}">
+    <form method="POST" action="lessons.php?subject_id=<?=$sid?>" enctype="multipart/form-data" id="lessonForm">
       <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($csrfToken)?>">
       <input type="hidden" name="subject_id" value="<?=$sid?>">
       <?php if($editLesson):?>
@@ -287,21 +283,42 @@ $topbarTitle=htmlspecialchars($sub['subject_name']);
           <input type="text" name="title" class="form-control form-control-flat"
                placeholder="e.g. Chapter 1: Introduction to Arrays" required maxlength="200" value="<?=htmlspecialchars($editLesson['title']??'')?>">
         </div>
-        <div class="form-group">
-          <label>Lesson Content<?=$editLesson?' *':''?>
-            <span style="color:var(--text-light);font-weight:400;font-size:0.72rem"><?=$editLesson?'(paste your notes or lesson text)':'(paste notes, or leave empty if you attach a file)'?></span>
-          </label>
-          <textarea name="raw_text" class="form-control" rows="7"
-                    placeholder="Paste lesson content here, or leave this empty and attach a file below. You can request an explanation, quiz, or flashcards separately after saving." <?=$editLesson?'required':''?>><?=htmlspecialchars($editLesson['raw_text']??'')?></textarea>
-          <div style="font-size:0.7rem;color:var(--text-light);margin-top:4px">
-            <i class="fas fa-info-circle"></i> <?= $editLesson ? 'Changes create a new source version; cached outputs for older versions remain available only as history.' : 'Exact duplicate content already stored in your account will be reused.' ?>
-          </div>
-        </div>
         <?php if(!$editLesson):?>
         <div class="form-group">
-          <label for="lessonMaterial">Attach study material <span style="color:var(--text-light);font-weight:400;font-size:0.72rem">(optional, PDF, DOCX, PPT, PPTX; 20 MB max)</span></label>
-          <input id="lessonMaterial" type="file" name="material" class="form-control" accept=".pdf,.docx,.ppt,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation">
-          <div style="font-size:0.7rem;color:var(--text-light);margin-top:4px">Text you enter and readable text extracted from the file will be saved together in this lesson.</div>
+          <label>Lesson Context *</label>
+          <div role="group" aria-label="Choose lesson context type" style="display:flex;gap:8px;margin-bottom:12px">
+            <button type="button" class="btn btn-primary btn-sm" id="lessonTextMode" aria-pressed="true" style="width:auto">Enter text</button>
+            <button type="button" class="btn btn-outline btn-sm" id="lessonFileMode" aria-pressed="false" style="width:auto">Upload a file</button>
+          </div>
+          <div id="lessonTextPanel">
+            <textarea name="raw_text" id="lessonText" class="form-control" rows="7"
+                      placeholder="Paste lesson content here. You can request an explanation, quiz, or flashcards separately after saving." required></textarea>
+          </div>
+          <div id="lessonFilePanel" hidden>
+            <label for="lessonMaterial">Study material <span style="color:var(--text-light);font-weight:400;font-size:0.72rem">(PDF, DOCX, PPT, PPTX; 20 MB max)</span></label>
+            <div id="lessonDropZone" tabindex="0" role="button" aria-controls="lessonMaterial" aria-label="Choose a study material file or drag and drop it here"
+                 style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:22px 14px;text-align:center;cursor:pointer;color:var(--text-mid);">
+              <i class="fas fa-cloud-upload-alt" style="font-size:1.4rem;margin-bottom:8px;color:var(--primary)"></i>
+              <div id="lessonFilePrompt">Drag and drop a file here, or <span style="color:var(--primary);font-weight:600;text-decoration:underline">browse files</span></div>
+              <div style="font-size:0.72rem;color:var(--text-light);margin-top:5px">PDF, DOCX, PPT, or PPTX · up to 20 MB</div>
+              <div id="lessonFileName" aria-live="polite" style="font-size:0.78rem;font-weight:600;margin-top:8px"></div>
+            </div>
+            <input id="lessonMaterial" type="file" name="material" accept=".pdf,.docx,.ppt,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" style="display:none">
+            <label for="lessonNotes" style="margin-top:12px">Additional notes <span style="color:var(--text-light);font-weight:400;font-size:0.72rem">(optional)</span></label>
+            <textarea name="raw_text" id="lessonNotes" class="form-control" rows="3" disabled placeholder="Add notes to combine with the text extracted from your file."></textarea>
+          </div>
+          <div style="font-size:0.7rem;color:var(--text-light);margin-top:6px">
+            <i class="fas fa-info-circle"></i> The text you enter or readable text extracted from the file will be saved as lesson content. Saving does not call AI.
+          </div>
+        </div>
+        <?php else:?>
+        <div class="form-group">
+          <label>Lesson Content *</label>
+          <textarea name="raw_text" class="form-control" rows="7"
+                    placeholder="Edit lesson content here." required><?=htmlspecialchars($editLesson['raw_text']??'')?></textarea>
+          <div style="font-size:0.7rem;color:var(--text-light);margin-top:4px">
+            <i class="fas fa-info-circle"></i> Changes create a new source version; cached outputs for older versions remain available only as history.
+          </div>
         </div>
         <?php endif;?>
       </div>
@@ -315,7 +332,55 @@ $topbarTitle=htmlspecialchars($sub['subject_name']);
   </div>
 </div>
 
+<script src="https://unpkg.com/lucide@1.56.0"></script>
 <?php
-$extraJs=$editLesson?"document.addEventListener('DOMContentLoaded',()=>openModal('addLessonModal'));":'';
+$extraJs="lucide.createIcons();".($editLesson?"document.addEventListener('DOMContentLoaded',()=>openModal('addLessonModal'));":"
+document.addEventListener('DOMContentLoaded',()=>{
+  const form=document.getElementById('lessonForm');
+  const textMode=document.getElementById('lessonTextMode');
+  const fileMode=document.getElementById('lessonFileMode');
+  if(!form||!textMode||!fileMode)return;
+  const textPanel=document.getElementById('lessonTextPanel');
+  const filePanel=document.getElementById('lessonFilePanel');
+  const textInput=document.getElementById('lessonText');
+  const notesInput=document.getElementById('lessonNotes');
+  const fileInput=document.getElementById('lessonMaterial');
+  const dropZone=document.getElementById('lessonDropZone');
+  const fileName=document.getElementById('lessonFileName');
+  const textAction='lessons.php?subject_id='+encodeURIComponent(".$sid.");
+  const fileAction='upload_document.php';
+  function setMode(mode){
+    const uploading=mode==='file';
+    textPanel.hidden=uploading;
+    filePanel.hidden=!uploading;
+    textInput.disabled=uploading;
+    textInput.required=!uploading;
+    notesInput.disabled=!uploading;
+    fileInput.required=uploading;
+    form.action=uploading?fileAction:textAction;
+    textMode.classList.toggle('btn-primary',!uploading);
+    textMode.classList.toggle('btn-outline',uploading);
+    textMode.setAttribute('aria-pressed',String(!uploading));
+    fileMode.classList.toggle('btn-primary',uploading);
+    fileMode.classList.toggle('btn-outline',!uploading);
+    fileMode.setAttribute('aria-pressed',String(uploading));
+  }
+  function showFile(file){
+    if(!file)return;
+    const transfer=new DataTransfer();
+    transfer.items.add(file);
+    fileInput.files=transfer.files;
+    fileName.textContent=file.name;
+  }
+  textMode.addEventListener('click',()=>setMode('text'));
+  fileMode.addEventListener('click',()=>setMode('file'));
+  fileInput.addEventListener('change',()=>{fileName.textContent=fileInput.files[0]?.name||'';});
+  dropZone.addEventListener('click',()=>fileInput.click());
+  dropZone.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();fileInput.click();}});
+  ['dragenter','dragover'].forEach(type=>dropZone.addEventListener(type,event=>{event.preventDefault();dropZone.style.borderColor='var(--primary)';}));
+  ['dragleave','drop'].forEach(type=>dropZone.addEventListener(type,event=>{event.preventDefault();dropZone.style.borderColor='var(--border)';}));
+  dropZone.addEventListener('drop',event=>showFile(event.dataTransfer.files[0]));
+});
+");
 include '../includes/footer.php';
 ?>

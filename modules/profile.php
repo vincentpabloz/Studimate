@@ -48,9 +48,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
 $initial=strtoupper(substr($u['name'],0,1));
 $pageTitle='Profile – StudiMate';
+$topbarTitle='Profile';
 include '../includes/header.php';
 include '../includes/sidebar.php';
-$topbarTitle='Profile';
 ?>
 
 <div class="page-body" style="max-width:680px;margin:0 auto">

@@ -33,9 +33,9 @@ foreach($schedules as $s){
 $today=date('Y-m-d');
 
 $pageTitle='Schedule – StudiMate';
+$topbarTitle='Schedule';
 include '../includes/header.php';
 include '../includes/sidebar.php';
-$topbarTitle='Schedule';
 ?>
 
 <div class="page-body">

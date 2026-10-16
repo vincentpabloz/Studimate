@@ -44,10 +44,10 @@ $greet=$hour<12?'Good morning':($hour<17?'Good afternoon':'Good evening');
 $firstName=explode(' ',$_SESSION['user_name'])[0];
 
 $pageTitle='Dashboard – StudiMate';
+$topbarTitle='Dashboard';
 $base='';
 include 'includes/header.php';
 include 'includes/sidebar.php';
-$topbarTitle='Dashboard';
 ?>
 
 <div class="page-body">
@@ -66,17 +66,17 @@ $topbarTitle='Dashboard';
   <!-- MINI STATS -->
   <div class="mini-stats mb-6">
     <div class="mini-stat">
-      <div class="mini-stat-icon">🏆</div>
+      <div class="mini-stat-icon"><i data-lucide="trophy" aria-hidden="true"></i></div>
       <div class="mini-stat-val"><?=$avg?>%</div>
       <div class="mini-stat-label">Quiz Avg</div>
     </div>
     <div class="mini-stat">
-      <div class="mini-stat-icon">🔥</div>
+      <div class="mini-stat-icon"><i data-lucide="flame" aria-hidden="true"></i></div>
       <div class="mini-stat-val"><?=$streakDays?>d</div>
       <div class="mini-stat-label">Streak</div>
     </div>
     <div class="mini-stat">
-      <div class="mini-stat-icon">⭐</div>
+      <div class="mini-stat-icon"><i data-lucide="star" aria-hidden="true"></i></div>
       <div class="mini-stat-val"><?=$due?></div>
       <div class="mini-stat-label">Due</div>
     </div>
@@ -178,4 +178,5 @@ $topbarTitle='Dashboard';
 
 </div>
 
-<?php include 'includes/footer.php';?>
+<script src="https://unpkg.com/lucide@1.56.0"></script>
+<?php $extraJs='lucide.createIcons();'; include 'includes/footer.php';?>

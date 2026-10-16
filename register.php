@@ -36,7 +36,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <body>
 <div class="auth-page">
   <div class="auth-brand">
-    <div class="auth-brand-icon">✦</div>
+    <div class="auth-brand-icon"><i class="fas fa-book-open" aria-hidden="true"></i></div>
     <h1>StudiMate</h1>
   </div>
 
@@ -105,10 +105,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   </div>
 
   <div class="auth-features" style="max-width:420px;width:100%;margin-top:12px">
-    <div class="auth-feature"><span>🧠</span>AI Quizzes</div>
-    <div class="auth-feature"><span>🃏</span>Flashcards</div>
-    <div class="auth-feature"><span>📊</span>Analytics</div>
+    <div class="auth-feature"><span><i data-lucide="brain" aria-hidden="true"></i></span>AI Quizzes</div>
+    <div class="auth-feature"><span><i data-lucide="playing-card" aria-hidden="true"></i></span>Flashcards</div>
+    <div class="auth-feature"><span><i data-lucide="chart-no-axes-column-increasing" aria-hidden="true"></i></span>Analytics</div>
   </div>
 </div>
+<script src="https://unpkg.com/lucide@1.56.0"></script>
+<script>lucide.createIcons();</script>
 <script src="assets/js/main.js"></script>
 </body></html>

@@ -12,7 +12,7 @@ if(isset($pdo,$_SESSION['user_id'])){
 <div class="app-layout">
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
-    <div class="sidebar-logo-icon">✦</div>
+    <div class="sidebar-logo-icon"><i class="fas fa-book-open" aria-hidden="true"></i></div>
     <h1>StudiMate</h1>
   </div>
 
