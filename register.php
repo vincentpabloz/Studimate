@@ -2,16 +2,21 @@
 session_start();
 if(isset($_SESSION['user_id'])){header("Location: dashboard.php");exit;}
 require 'config/db.php';
+$csrfToken=$_SESSION['csrf_token']??bin2hex(random_bytes(32));
+$_SESSION['csrf_token']=$csrfToken;
 $error='';$success='';
 if($_SERVER['REQUEST_METHOD']==='POST'){
   $name=trim($_POST['name']??'');
   $email=trim($_POST['email']??'');
   $pass=$_POST['password']??'';
   $conf=$_POST['confirm_password']??'';
-  if(!$name||!$email||!$pass){$error='Please fill in all fields.';}
-  elseif(strlen($name)<2){$error='Name must be at least 2 characters.';}
+  if(!hash_equals($csrfToken,(string)($_POST['csrf_token']??''))){$error='Your session expired. Reload the page and try again.';}
+  elseif(!$name||!$email||!$pass){$error='Please fill in all fields.';}
+  elseif(mb_strlen($name)<2){$error='Name must be at least 2 characters.';}
+  elseif(mb_strlen($name)>100||strlen($email)>100){$error='Name and email must be 100 characters or fewer.';}
   elseif(!filter_var($email,FILTER_VALIDATE_EMAIL)){$error='Enter a valid email address.';}
   elseif(strlen($pass)<8){$error='Password must be at least 8 characters.';}
+  elseif(strlen($pass)>72){$error='Password must be 72 characters or fewer.';}
   elseif($pass!==$conf){$error='Passwords do not match.';}
   else{
     $chk=$pdo->prepare("SELECT id FROM users WHERE email=?");$chk->execute([$email]);
@@ -57,6 +62,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     <?php endif;?>
 
     <form method="POST" id="registerForm" novalidate>
+      <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($csrfToken)?>">
       <div class="form-group">
         <label>Full Name</label>
         <input type="text" name="name" class="form-control" placeholder="Alex Johnson"

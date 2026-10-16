@@ -6,6 +6,11 @@ if(isset($pdo,$_SESSION['user_id'])){
   $nc=$pdo->prepare("SELECT COUNT(*) FROM review_schedule WHERE user_id=? AND next_review_date<=CURDATE()");
   $nc->execute([$_SESSION['user_id']]);
   $_notifCount=(int)$nc->fetchColumn();
+  // Respect the "Review reminders" setting from the Profile page.
+  $np=$pdo->prepare("SELECT notif_reviews FROM users WHERE id=?");
+  $np->execute([$_SESSION['user_id']]);
+  $_pref=$np->fetchColumn();
+  if($_pref!==false&&!(int)$_pref)$_notifCount=0;
 }
 ?>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>

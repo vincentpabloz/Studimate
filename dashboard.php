@@ -38,6 +38,29 @@ $upcoming=$pdo->prepare("
 ");
 $upcoming->execute([$uid]);$reviews=$upcoming->fetchAll();
 
+// Reminders (respect the user's notification settings)
+$prefQ=$pdo->prepare("SELECT notif_reviews,notif_quizzes FROM users WHERE id=?");
+$prefQ->execute([$uid]);
+$prefs=$prefQ->fetch()?:['notif_reviews'=>1,'notif_quizzes'=>0];
+$dueList=[];
+if($due>0&&!empty($prefs['notif_reviews'])){
+  $dl=$pdo->prepare("
+    SELECT l.id AS lesson_id,l.title,s.subject_name,rs.next_review_date
+    FROM review_schedule rs
+    JOIN lessons l ON l.id=rs.lesson_id
+    JOIN subjects s ON s.id=l.subject_id
+    WHERE rs.user_id=? AND rs.next_review_date<=CURDATE()
+    ORDER BY rs.next_review_date ASC LIMIT 3
+  ");
+  $dl->execute([$uid]);$dueList=$dl->fetchAll();
+}
+$noQuizToday=false;
+if(!empty($prefs['notif_quizzes'])){
+  $qt=$pdo->prepare("SELECT COUNT(*) FROM quiz_results WHERE user_id=? AND DATE(taken_at)=CURDATE()");
+  $qt->execute([$uid]);
+  $noQuizToday=((int)$qt->fetchColumn()===0);
+}
+
 $hour=date('H');
 $greet=$hour<12?'Good morning':'($hour<17?\'Good afternoon\':\'Good evening\')';
 $greet=$hour<12?'Good morning':($hour<17?'Good afternoon':'Good evening');
@@ -51,6 +74,34 @@ include 'includes/sidebar.php';
 ?>
 
 <div class="page-body">
+
+  <!-- REMINDERS -->
+  <?php if($dueList):?>
+  <div class="alert alert-warning mb-4" role="alert">
+    <i class="fas fa-bell"></i>
+    <div style="flex:1">
+      <strong>You have <?=(int)$due?> review<?=$due>1?'s':''?> due.</strong>
+      <ul style="margin:6px 0 0 16px;padding:0;font-weight:500">
+        <?php foreach($dueList as $d):
+          $overdue=strtotime($d['next_review_date'])<strtotime('today');?>
+        <li>
+          <a href="modules/study.php?lesson_id=<?=(int)$d['lesson_id']?>" style="color:inherit;text-decoration:underline"><?=htmlspecialchars($d['title'])?></a>
+          &middot; <?=htmlspecialchars($d['subject_name'])?> &middot; <?=$overdue?'Overdue':'Due today'?>
+        </li>
+        <?php endforeach;?>
+      </ul>
+      <?php if($due>count($dueList)):?>
+      <div style="margin-top:6px;font-weight:500">+ <?=(int)($due-count($dueList))?> more &middot; <a href="modules/schedule.php" style="color:inherit;text-decoration:underline">View schedule</a></div>
+      <?php endif;?>
+    </div>
+  </div>
+  <?php endif;?>
+  <?php if($noQuizToday):?>
+  <div class="alert alert-info mb-4" role="status">
+    <i class="fas fa-lightbulb"></i>
+    <div>You haven't taken a quiz today. <a href="modules/ai_tools.php" style="color:inherit;font-weight:700;text-decoration:underline">Generate a quiz</a> to keep your streak going.</div>
+  </div>
+  <?php endif;?>
 
   <!-- HERO BANNER -->
   <div class="hero-banner mb-6">
@@ -179,4 +230,11 @@ include 'includes/sidebar.php';
 </div>
 
 <script src="https://unpkg.com/lucide@1.56.0"></script>
-<?php $extraJs='lucide.createIcons();'; include 'includes/footer.php';?>
+<?php
+$extraJs='lucide.createIcons();';
+if($dueList&&empty($_SESSION['due_toast_shown'])){
+  $_SESSION['due_toast_shown']=true;
+  $toastMsg='You have '.$due.' review'.($due>1?'s':'').' due.';
+  $extraJs.="showToast(".json_encode($toastMsg,JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT).",'warning');";
+}
+include 'includes/footer.php';?>
