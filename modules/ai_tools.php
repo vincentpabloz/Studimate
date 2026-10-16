@@ -3,6 +3,7 @@ session_start();
 if(!isset($_SESSION['user_id'])){header("Location: ../index.php");exit;}
 require '../config/db.php';
 require '../includes/content_helpers.php';
+require '../includes/study_helpers.php';
 require_once '../config/env.php';
 $uid=$_SESSION['user_id'];$base='../';
 
@@ -176,40 +177,12 @@ function getCachedOutput(PDO $pdo,int $userId,string $type,array $lessons):?arra
   return['content'=>$content,'cached'=>true,'combined'=>true,'error'=>null];
 }
 
-function parseQuiz($text){
-  $qs=[];
-  $blocks=preg_split('/\nQ:/i',"\n".$text);
-  foreach($blocks as $b){
-    $b=trim($b);if(!$b)continue;
-    if(!preg_match('/^(.+?)\nA:/si',$b,$qm))continue;
-    $question=trim($qm[1]);$opts=[];
-    foreach(['A','B','C','D'] as $l){
-      if(preg_match('/'.$l.':\s*(.+?)(?=\n[A-D]:|ANSWER:|$)/si',$b,$m))$opts[]=trim($m[1]);
-    }
-    $correct=0;
-    if(preg_match('/ANSWER:\s*([A-D])/i',$b,$am))$correct=ord(strtoupper($am[1]))-ord('A');
-    if(count($opts)===4)$qs[]=['question'=>$question,'options'=>$opts,'correct'=>$correct];
-  }
-  return $qs;
-}
-
-function parseFC($text){
-  $cards=[];
-  $blocks=preg_split('/\nFRONT:/i',"\n".$text);
-  foreach($blocks as $b){
-    $b=trim($b);if(!$b)continue;
-    if(preg_match('/^(.+?)\nBACK:\s*(.+?)$/si',$b,$m))
-      $cards[]=['front'=>trim($m[1]),'back'=>trim($m[2])];
-  }
-  return $cards;
-}
-
 $outputResults=[];$outputErrors=[];$wasCached=false;$saveSuccess='';
 if($_SERVER['REQUEST_METHOD']==='POST'){
   $action=$_POST['action']??'generate';
-  if($action==='save_output'){
-    $selectedType=$_POST['type']??'';
-    $selectedTypes=in_array($selectedType,$outputTypes,true)?[$selectedType]:[];
+  if($action==='save_outputs'){
+    $postedTab=$_POST['tab']??$selectedType;
+    $selectedType=is_string($postedTab)&&in_array($postedTab,$outputTypes,true)?$postedTab:'explanation';
   }else{
     $selectedType=$selectedTypes[0]??'explanation';
   }
@@ -217,20 +190,46 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $outputErrors[$selectedType]='Your session expired. Reload the page and try again.';
   }elseif(!$selectedLessons){
     $outputErrors[$selectedType]='Choose a lesson that belongs to your account.';
-  }elseif($action==='save_output'){
-    $pending=$_SESSION['pending_study_outputs'][$selectedType]??null;
+  }elseif($action==='save_outputs'){
     $pendingLesson=$selectedLessons[0];
-    if(!$pending||!hash_equals((string)$pending['token'],(string)($_POST['pending_token']??''))||
-      (int)$pending['lesson_id']!==(int)$pendingLesson['id']||$pending['type']!==$selectedType||
-      !hash_equals((string)$pending['content_hash'],(string)$pendingLesson['content_hash'])||
-      (int)$pending['source_version']!==(int)$pendingLesson['version']){
-      $outputErrors[$selectedType]='This generated output is no longer available to save. Generate it again.';
+    $postedTokens=$_POST['pending_tokens']??[];
+    $pendingToSave=[];
+    if(!is_array($postedTokens)){
+      $outputErrors[$selectedType]='The generated outputs could not be verified. Reload and try again.';
     }else{
-      $save=$pdo->prepare('INSERT INTO study_tools (lesson_id,type,content,source_hash,source_version) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE content=VALUES(content),source_hash=VALUES(source_hash),source_version=VALUES(source_version),generated_at=CURRENT_TIMESTAMP');
-      $save->execute([(int)$pendingLesson['id'],$selectedType,$pending['content'],$pending['content_hash'],(int)$pending['source_version']]);
-      unset($_SESSION['pending_study_outputs'][$selectedType]);
-      header('Location: ai_tools.php?lesson_id='.(int)$pendingLesson['id'].'&tab='.urlencode($selectedType).'&saved=1');
-      exit;
+      foreach($outputTypes as $type){
+        $pending=$_SESSION['pending_study_outputs'][$type]??null;
+        if(!$pending||(int)$pending['lesson_id']!==(int)$pendingLesson['id']||$pending['type']!==$type||
+          !hash_equals((string)$pending['content_hash'],(string)$pendingLesson['content_hash'])||
+          (int)$pending['source_version']!==(int)$pendingLesson['version']){
+          continue;
+        }
+        $token=$postedTokens[$type]??'';
+        if(!is_string($token)||!hash_equals((string)$pending['token'],$token)){
+          $outputErrors[$selectedType]='One or more generated outputs are no longer available to save. Generate them again.';
+          $pendingToSave=[];
+          break;
+        }
+        $pendingToSave[$type]=$pending;
+      }
+      if(!isset($outputErrors[$selectedType])&&!$pendingToSave){
+        $outputErrors[$selectedType]='There are no new generated outputs to save.';
+      }elseif(!isset($outputErrors[$selectedType])){
+        try{
+          $pdo->beginTransaction();
+          $save=$pdo->prepare('INSERT INTO study_tools (lesson_id,type,content,source_hash,source_version) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE content=VALUES(content),source_hash=VALUES(source_hash),source_version=VALUES(source_version),generated_at=CURRENT_TIMESTAMP');
+          foreach($pendingToSave as $type=>$pending){
+            $save->execute([(int)$pendingLesson['id'],$type,$pending['content'],$pending['content_hash'],(int)$pending['source_version']]);
+          }
+          $pdo->commit();
+          foreach(array_keys($pendingToSave) as $type)unset($_SESSION['pending_study_outputs'][$type]);
+          header('Location: ai_tools.php?lesson_id='.(int)$pendingLesson['id'].'&tab='.urlencode($selectedType).'&saved=1');
+          exit;
+        }catch(Throwable $error){
+          if($pdo->inTransaction())$pdo->rollBack();
+          throw $error;
+        }
+      }
     }
   }elseif(!$selectedTypes){
     $outputErrors['selection']='Choose at least one study output.';
@@ -257,7 +256,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
   }
 }elseif($selectedLessons){
-  if(isset($_GET['saved']))$saveSuccess='Study output saved to the '.$lesson['subject_name'].' subject.';
+  if(isset($_GET['saved']))$saveSuccess='Generated study outputs saved to the '.$lesson['subject_name'].' subject.';
   foreach($selectedTypes as $type){
     $pending=$_SESSION['pending_study_outputs'][$type]??null;
     if($pending&&(int)$pending['lesson_id']===$lesson_id&&$pending['type']===$type&&
@@ -278,6 +277,17 @@ foreach($outputTypes as $type){
 }
 $quizQs=isset($outputResults['quiz'])?parseQuiz($outputResults['quiz']):[];
 $flashcards=isset($outputResults['flashcard'])?parseFC($outputResults['flashcard']):[];
+$pendingSaveTypes=[];
+if($lesson){
+  foreach($outputTypes as $type){
+    $pending=$_SESSION['pending_study_outputs'][$type]??null;
+    if($pending&&(int)$pending['lesson_id']===$lesson_id&&$pending['type']===$type&&
+      hash_equals((string)$pending['content_hash'],(string)$lesson['content_hash'])&&
+      (int)$pending['source_version']===(int)$lesson['version']){
+      $pendingSaveTypes[$type]=$pending;
+    }
+  }
+}
 
 $pageTitle='AI Tools – StudiMate';
 $topbarTitle='AI Tools';
@@ -339,13 +349,6 @@ include '../includes/sidebar.php';
   <?php if($saveSuccess):?><div class="alert alert-success"><i class="fas fa-check-circle"></i><?=htmlspecialchars($saveSuccess)?></div><?php endif;?>
   <?php if(isset($outputErrors['selection'])):?><div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i><?=htmlspecialchars($outputErrors['selection'])?></div><?php endif;?>
   <?php foreach(['explanation','quiz','flashcard'] as $type):?>
-  <?php
-    $pendingOutput=$_SESSION['pending_study_outputs'][$type]??null;
-    $canSaveOutput=$pendingOutput&&$lesson&&isset($outputResults[$type])&&
-      (int)$pendingOutput['lesson_id']===$lesson_id&&$pendingOutput['type']===$type&&
-      hash_equals((string)$pendingOutput['content_hash'],(string)$lesson['content_hash'])&&
-      (int)$pendingOutput['source_version']===(int)$lesson['version'];
-  ?>
   <section id="panel-<?=$type?>" role="tabpanel" aria-labelledby="tab-<?=$type?>" style="<?=$selectedType===$type?'':'display:none'?>">
   <?php if(isset($outputErrors[$type])):?>
   <div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i><?=htmlspecialchars($outputErrors[$type])?></div>
@@ -360,6 +363,7 @@ include '../includes/sidebar.php';
   </div>
   <?php elseif($type==='quiz'):?>
   <input type="hidden" id="lessonId" value="<?=count($selectedLessons)===1?$lesson_id:''?>">
+  <input type="hidden" id="quizCsrfToken" value="<?=htmlspecialchars($csrfToken)?>">
   <?php if(empty($quizQs)):?>
   <div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i>Quiz format could not be parsed. Try regenerating.</div>
   <?php else:?>
@@ -434,25 +438,30 @@ include '../includes/sidebar.php';
   </div>
   <?php endif;?>
   <?php endif;?>
-  <?php if($canSaveOutput):?>
-  <form method="POST" class="mb-4" style="margin-top:16px">
-    <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($csrfToken)?>">
-    <input type="hidden" name="action" value="save_output">
-    <input type="hidden" name="lesson_id" value="<?=$lesson_id?>">
-    <input type="hidden" name="type" value="<?=htmlspecialchars($type)?>">
-    <input type="hidden" name="pending_token" value="<?=htmlspecialchars($pendingOutput['token'])?>">
-    <button type="submit" class="btn btn-primary btn-pill btn-sm" style="width:auto"><i class="fas fa-save"></i> Save <?=htmlspecialchars($type==='explanation'?'summary':($type==='flashcard'?'flashcards':'quiz'))?> to <?=htmlspecialchars($lesson['subject_name'])?></button>
-  </form>
-  <?php endif;?>
   </section>
   <?php endforeach;?>
+  <?php if($pendingSaveTypes):?>
+  <form method="POST" class="mb-4" style="margin-top:16px">
+    <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($csrfToken)?>">
+    <input type="hidden" name="action" value="save_outputs">
+    <input type="hidden" name="lesson_id" value="<?=$lesson_id?>">
+    <input type="hidden" name="tab" value="<?=htmlspecialchars($selectedType)?>">
+    <?php foreach($pendingSaveTypes as $type=>$pending):?>
+    <input type="hidden" name="pending_tokens[<?=htmlspecialchars($type)?>]" value="<?=htmlspecialchars($pending['token'])?>">
+    <?php endforeach;?>
+    <button type="submit" class="btn btn-primary btn-pill btn-sm" style="width:auto">
+      <i class="fas fa-save"></i> Save to Subject
+    </button>
+    <span class="text-sm text-muted" style="margin-left:8px">Saves only the generated outputs for this lesson.</span>
+  </form>
+  <?php endif;?>
   <?php endif;?>
 
 </div>
 
 <?php
 $fcTotal=count($flashcards);
-$qJson=!empty($quizQs)?json_encode($quizQs):'[]';
+$qJson=!empty($quizQs)?(json_encode($quizQs,JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT)?:'[]'):'[]';
 $extraJs="window.showStudyOutput=function(type){['explanation','quiz','flashcard'].forEach(function(name){var tab=document.getElementById('tab-'+name);var panel=document.getElementById('panel-'+name);var active=name===type;if(tab){tab.setAttribute('aria-selected',active?'true':'false');tab.style.background=active?'var(--primary)':'';tab.style.color=active?'#fff':'';tab.style.borderColor=active?'var(--primary)':'';}if(panel)panel.style.display=active?'block':'none';});};initFlashcards($fcTotal);".(!empty($quizQs)?"document.addEventListener('DOMContentLoaded',()=>initQuiz($qJson));":"");
 // Keyboard nav for flashcards
 if(!empty($flashcards)){

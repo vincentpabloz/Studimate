@@ -241,7 +241,7 @@ include '../includes/sidebar.php';
         <div style="display:flex;gap:6px;align-items:center">
             <a href="lessons.php?subject_id=<?=$sid?>&edit=<?=(int)$l['id']?>#editLessonModal"
              class="btn btn-outline btn-sm btn-pill" style="font-size:0.75rem">Edit</a>
-          <a href="ai_tools.php?lesson_id=<?=$l['id']?>&tab=explanation"
+          <a href="study.php?lesson_id=<?=(int)$l['id']?>"
              class="btn btn-accent-outline btn-sm btn-pill" style="font-size:0.75rem">
             Study
           </a>

@@ -131,8 +131,10 @@ function showResult(){
     res.querySelector('.score-msg').textContent=pct>=80?'🎉 Excellent! Review in 7 days.':pct>=50?'👍 Good job! Review in 3 days.':'📖 Keep studying! Review in 1 day.';
     const lid=document.getElementById('lessonId');
     if(lid){
-      fetch('save_quiz.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lesson_id:lid.value,score:qScore,total:qData.length})})
-        .then(r=>r.json()).then(d=>{if(d.success)showToast('Score saved!')}).catch(()=>{});
+      const csrf=document.getElementById('quizCsrfToken');
+      fetch('save_quiz.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lesson_id:lid.value,score:qScore,total:qData.length,csrf_token:csrf?csrf.value:''})})
+        .then(r=>r.json()).then(d=>{if(d.success)showToast('Score saved!');else showToast(d.error||'Could not save quiz result.','error')})
+        .catch(()=>showToast('Could not save quiz result. Please try again.','error'));
     }
   }
 }
