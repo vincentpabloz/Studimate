@@ -47,9 +47,9 @@ $colors=['#5B5FDE','#22C55E','#EF4444','#F59E0B','#8B5CF6','#06B6D4','#EC4899','
 $icons=['📘','📗','📕','📙','📓','📔','📐','🔬','🌍','💻','📊','🎨'];
 
 $pageTitle='Subjects – StudiMate';
+$topbarTitle='Subjects';
 include '../includes/header.php';
 include '../includes/sidebar.php';
-$topbarTitle='Subjects';
 ?>
 
 <div class="page-body">

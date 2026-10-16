@@ -30,9 +30,9 @@ $sLabels=json_encode(array_map(fn($r)=>substr($r['subject_name'],0,6),$subStats)
 $sVals=json_encode(array_column($subStats,'avg_pct'));
 
 $pageTitle='Analytics – StudiMate';
+$topbarTitle='Analytics';
 include '../includes/header.php';
 include '../includes/sidebar.php';
-$topbarTitle='Analytics';
 ?>
 
 <div class="page-body">

@@ -44,10 +44,10 @@ $greet=$hour<12?'Good morning':($hour<17?'Good afternoon':'Good evening');
 $firstName=explode(' ',$_SESSION['user_name'])[0];
 
 $pageTitle='Dashboard – StudiMate';
+$topbarTitle='Dashboard';
 $base='';
 include 'includes/header.php';
 include 'includes/sidebar.php';
-$topbarTitle='Dashboard';
 ?>
 
 <div class="page-body">

@@ -31,9 +31,9 @@ $overdue=$pdo->prepare("
 $overdue->execute([$uid]);$overdueList=$overdue->fetchAll();
 
 $pageTitle='Recommendations – StudiMate';
+$topbarTitle='Recommendations';
 include '../includes/header.php';
 include '../includes/sidebar.php';
-$topbarTitle='Recommendations';
 ?>
 
 <div class="page-body">

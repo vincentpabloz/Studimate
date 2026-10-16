@@ -149,9 +149,9 @@ $pct=count($lessonList)>0?round(($doneCount/count($lessonList))*100):0;
 $avgAll=count($lessonList)>0?round(array_sum(array_column($lessonList,'avg_score'))/max(1,count(array_filter($lessonList,fn($l)=>$l['avg_score']>0)))):0;
 
 $pageTitle=htmlspecialchars($sub['subject_name']).' – StudiMate';
+$topbarTitle=htmlspecialchars($sub['subject_name']);
 include '../includes/header.php';
 include '../includes/sidebar.php';
-$topbarTitle=htmlspecialchars($sub['subject_name']);
 ?>
 
 <div class="page-body">
