@@ -184,49 +184,6 @@ function getCachedOutput(PDO $pdo,int $userId,string $type,array $lessons):?arra
   return['content'=>$content,'cached'=>true,'combined'=>true,'error'=>null];
 }
 
-if(!function_exists('normalizeAiText')){function normalizeAiText($text){
-  $t=str_replace(["\r\n","\r"],"\n",(string)$text);
-  $t=str_replace(['**','__','`'],'',$t);
-  $t=preg_replace('/^[ \t]*#{1,6}[ \t]*/m','',$t);                       // markdown headings
-  $t=preg_replace('/^[ \t]*[-*\x{2022}][ \t]+(?=(?:Q|Question|[A-D]|ANSWER|Answer|Correct|FRONT|Front|BACK|Back)\b)/mu','',$t); // bullets before labels
-  $t=preg_replace('/^[ \t]*(?:Q|Question)[ \t]*\d*[ \t]*[:.)][ \t]*/mi','Q: ',$t);
-  $t=preg_replace('/^[ \t]*([A-Da-d])[ \t]*[:.)][ \t]+/m','$1: ',$t);
-  $t=preg_replace('/^[ \t]*(?:Correct[ \t]+)?Answer[ \t]*:[ \t]*/mi','ANSWER: ',$t);
-  $t=preg_replace('/^[ \t]*(?:Card[ \t]*\d*[ \t]*)?Front[ \t]*:[ \t]*/mi','FRONT: ',$t);
-  $t=preg_replace('/^[ \t]*(?:Card[ \t]*\d*[ \t]*)?Back[ \t]*:[ \t]*/mi','BACK: ',$t);
-  return $t;
-}}
-
-if(!function_exists('parseQuiz')){function parseQuiz($text){
-  $qs=[];
-  $blocks=preg_split('/\nQ:/i',"\n".normalizeAiText($text));
-  foreach($blocks as $b){
-    $b=trim($b);if($b==='')continue;
-    if(!preg_match('/^(.+?)\nA:/s',$b,$qm))continue;
-    $question=trim($qm[1]);$opts=[];
-    foreach(['A','B','C','D'] as $l){
-      if(preg_match('/^'.$l.':[ \t]*(.+?)(?=\n[A-D]:|\nANSWER:|\z)/smi',$b,$m))$opts[]=trim($m[1]);
-    }
-    $correct=0;
-    if(preg_match('/ANSWER:[ \t]*\(?([A-D])/i',$b,$am))$correct=ord(strtoupper($am[1]))-ord('A');
-    if(count($opts)===4&&$question!=='')$qs[]=['question'=>$question,'options'=>$opts,'correct'=>$correct];
-  }
-  return $qs;
-}}
-
-if(!function_exists('parseFC')){function parseFC($text){
-  $cards=[];
-  $blocks=preg_split('/\nFRONT:/i',"\n".normalizeAiText($text));
-  foreach($blocks as $b){
-    $b=trim($b);if($b==='')continue;
-    if(preg_match('/^(.+?)\nBACK:[ \t]*(.+)$/s',$b,$m)){
-      $front=trim($m[1]);$back=trim($m[2]);
-      if($front!==''&&$back!=='')$cards[]=['front'=>$front,'back'=>$back];
-    }
-  }
-  return $cards;
-}}
-
 $outputResults=[];$outputErrors=[];$wasCached=false;$saveSuccess='';
 if($_SERVER['REQUEST_METHOD']==='POST'){
   $action=$_POST['action']??'generate';
