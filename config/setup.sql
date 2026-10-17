@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS users (
     role ENUM('student','admin') DEFAULT 'student',
     notif_reviews TINYINT(1) DEFAULT 1,
     notif_quizzes TINYINT(1) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    unsubscribe_token CHAR(64) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_unsubscribe_token (unsubscribe_token)
 );
 
 CREATE TABLE IF NOT EXISTS subjects (
@@ -146,6 +148,7 @@ CREATE TABLE IF NOT EXISTS review_schedule (
     lesson_id INT NOT NULL,
     next_review_date DATE NOT NULL,
     interval_days INT NOT NULL DEFAULT 1,
+    last_reminded_on DATE DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_schedule (user_id, lesson_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
