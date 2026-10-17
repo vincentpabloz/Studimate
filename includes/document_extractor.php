@@ -46,6 +46,59 @@ function extractDocxText(string $path): string
     }
 }
 
+function pptxRelatedText(ZipArchive $zip, string $slideName): array
+{
+    $relsName = dirname($slideName) . '/_rels/' . basename($slideName) . '.rels';
+    $rels = $zip->getFromName($relsName);
+    if (!is_string($rels)) {
+        return [];
+    }
+    $out = [];
+    try {
+        $doc = loadOfficeXml($rels);
+    } catch (Throwable $e) {
+        return [];
+    }
+    foreach ($doc->children() as $rel) {
+        $type = (string)$rel['Type'];
+        $target = (string)$rel['Target'];
+        if (!preg_match('#/(notesSlide|diagramData|chart)$#', $type, $m)) {
+            continue;
+        }
+        $path = $target[0] === '/' ? ltrim($target, '/') : dirname($slideName) . '/' . $target;
+        $parts = [];
+        foreach (explode('/', $path) as $seg) {
+            if ($seg === '..') {
+                array_pop($parts);
+            } elseif ($seg !== '.' && $seg !== '') {
+                $parts[] = $seg;
+            }
+        }
+        $xml = $zip->getFromName(implode('/', $parts));
+        if (!is_string($xml)) {
+            continue;
+        }
+        try {
+            $part = loadOfficeXml($xml);
+        } catch (Throwable $e) {
+            continue;
+        }
+        $part->registerXPathNamespace('a', 'http://schemas.openxmlformats.org/drawingml/2006/main');
+        $part->registerXPathNamespace('c', 'http://schemas.openxmlformats.org/drawingml/2006/chart');
+        $nodes = $part->xpath($m[1] === 'chart' ? '//a:t | //c:v' : '//a:t') ?: [];
+        $texts = array_values(array_filter(array_map(static fn($n) => trim((string)$n), $nodes), static fn($t) => $t !== ''));
+        if ($m[1] === 'notesSlide') {
+            // drop the bare slide-number placeholder
+            $texts = array_values(array_filter($texts, static fn($t) => !ctype_digit($t)));
+        }
+        if ($texts) {
+            $label = ['notesSlide' => 'Speaker notes', 'diagramData' => 'Diagram', 'chart' => 'Chart'][$m[1]];
+            $out[] = $label . ': ' . implode('; ', $texts);
+        }
+    }
+    return $out;
+}
+
 function extractPptxText(string $path): string
 {
     if (!class_exists(ZipArchive::class)) {
@@ -77,8 +130,13 @@ function extractPptxText(string $path): string
             $slide->registerXPathNamespace('a', 'http://schemas.openxmlformats.org/drawingml/2006/main');
             $texts = array_map(static fn($run) => trim((string)$run), $slide->xpath('//a:t') ?: []);
             $texts = array_values(array_filter($texts, static fn($text) => $text !== ''));
-            if ($texts) {
-                $result[] = 'Slide ' . $number . ":\n" . implode("\n", $texts);
+            $extra = pptxRelatedText($zip, $name);
+            if ($texts || $extra) {
+                $block = 'Slide ' . $number . ":\n" . implode("\n", $texts);
+                if ($extra) {
+                    $block .= "\n" . implode("\n", $extra);
+                }
+                $result[] = trim($block);
             }
         }
         return implode("\n\n", $result);

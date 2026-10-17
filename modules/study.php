@@ -100,7 +100,7 @@ include '../includes/sidebar.php';
     <?php if (isset($savedOutputs['explanation'])): ?>
     <div class="card">
       <div class="card-header"><h3>Summary</h3></div>
-      <div class="card-body" style="line-height:1.8;font-size:0.88rem;color:var(--text-dark);white-space:pre-wrap"><?=htmlspecialchars($savedOutputs['explanation'])?></div>
+      <div class="card-body" style="line-height:1.7;font-size:0.88rem;color:var(--text-dark)"><?=renderSummary($savedOutputs['explanation'])?></div>
     </div>
     <?php else: ?>
     <div class="empty-state"><i class="fas fa-file-alt"></i><h4>No saved summary</h4><p>Generate a summary and use “Save to Subject” to keep it with this lesson.</p><a class="btn btn-primary btn-pill btn-sm" style="width:auto" href="ai_tools.php?lesson_id=<?=$lessonId?>&amp;tab=explanation">Generate summary</a></div>
@@ -182,7 +182,7 @@ include '../includes/sidebar.php';
 <?php
 $quizJson = json_encode($quizQuestions, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
 $flashcardCount = count($flashcards);
-$extraJs = "window.showStudyTab=function(key){['file','explanation','quiz','flashcard'].forEach(function(name){var tab=document.getElementById('study-tab-'+name);var panel=document.getElementById('study-panel-'+name);var active=name===key;if(tab){tab.setAttribute('aria-selected',active?'true':'false');tab.style.background=active?'var(--primary)':'';tab.style.color=active?'#fff':'';tab.style.borderColor=active?'var(--primary)':'';}if(panel)panel.style.display=active?'block':'none';});history.replaceState(null,'','study.php?lesson_id=".$lessonId."&tab='+encodeURIComponent(key));};initFlashcards(".$flashcardCount.");";
+$extraJs = "window.showStudyTab=function(key){['file','explanation','quiz','flashcard'].forEach(function(name){var tab=document.getElementById('study-tab-'+name);var panel=document.getElementById('study-panel-'+name);var active=name===key;if(tab){tab.setAttribute('aria-selected',active?'true':'false');tab.style.background=active?'var(--primary)':'';tab.style.color=active?'#fff':'';tab.style.borderColor=active?'var(--primary)':'';}if(panel)panel.style.display=active?'block':'none';});history.replaceState(null,'','study.php?lesson_id=".$lessonId."&tab='+encodeURIComponent(key));};fcTotal=".$flashcardCount.";fcIdx=0;";
 if ($quizQuestions) {
     $extraJs .= "document.addEventListener('DOMContentLoaded',function(){initQuiz(" . ($quizJson ?: '[]') . ");});";
 }

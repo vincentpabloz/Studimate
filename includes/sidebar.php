@@ -29,9 +29,9 @@ if(isset($pdo,$_SESSION['user_id'])){
       </a>
     </div>
     <div class="nav-item">
-      <a href="<?=$base??''?>modules/subjects.php" class="<?=isActive('subjects.php')?>">
+      <a href="<?=$base??''?>modules/subjects.php" class="<?=isActive(['subjects.php','lessons.php','study.php'])?>">
         <i class="fas fa-book-open"></i> Subjects
-        <?php if(isActive('subjects.php')==='active'):?><span class="nav-dot"></span><?php endif;?>
+        <?php if(isActive(['subjects.php','lessons.php','study.php'])==='active'):?><span class="nav-dot"></span><?php endif;?>
       </a>
     </div>
     <div class="nav-item">
