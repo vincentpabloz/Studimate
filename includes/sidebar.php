@@ -41,6 +41,12 @@ if(isset($pdo,$_SESSION['user_id'])){
       </a>
     </div>
     <div class="nav-item">
+      <a href="<?=$base??''?>modules/micro.php" class="<?=isActive('micro.php')?>">
+        <i class="fas fa-bolt"></i> Microlearning
+        <?php if(isActive('micro.php')==='active'):?><span class="nav-dot"></span><?php endif;?>
+      </a>
+    </div>
+    <div class="nav-item">
       <a href="<?=$base??''?>modules/schedule.php" class="<?=isActive('schedule.php')?>">
         <i class="fas fa-calendar-alt"></i> Schedule
         <?php if(isActive('schedule.php')==='active'):?><span class="nav-dot"></span><?php endif;?>

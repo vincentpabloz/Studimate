@@ -61,9 +61,8 @@ if(!empty($prefs['notif_quizzes'])){
   $noQuizToday=((int)$qt->fetchColumn()===0);
 }
 
-$hour=date('H');
-$greet=$hour<12?'Good morning':'($hour<17?\'Good afternoon\':\'Good evening\')';
-$greet=$hour<12?'Good morning':($hour<17?'Good afternoon':'Good evening');
+$hour=(int)date('G');
+$greet=$hour<12?'Good morning':($hour<18?'Good afternoon':'Good evening');
 $firstName=explode(' ',$_SESSION['user_name'])[0];
 
 $pageTitle='Dashboard – StudiMate';
