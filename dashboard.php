@@ -84,7 +84,7 @@ include 'includes/sidebar.php';
         <?php foreach($dueList as $d):
           $overdue=strtotime($d['next_review_date'])<strtotime('today');?>
         <li>
-          <a href="modules/study.php?lesson_id=<?=(int)$d['lesson_id']?>" style="color:inherit;text-decoration:underline"><?=htmlspecialchars($d['title'])?></a>
+          <a href="modules/study.php?lesson_id=<?=(int)$d['lesson_id']?>&tab=explanation" style="color:inherit;text-decoration:underline"><?=htmlspecialchars($d['title'])?></a>
           &middot; <?=htmlspecialchars($d['subject_name'])?> &middot; <?=$overdue?'Overdue':'Due today'?>
         </li>
         <?php endforeach;?>

@@ -65,6 +65,10 @@ include '../includes/sidebar.php';
     <i class="fas fa-chevron-left"></i> <?=htmlspecialchars($lesson['subject_name'])?>
   </a>
 
+  <?php if(isset($_GET['saved'])):?>
+  <div class="alert alert-success mb-4"><i class="fas fa-check-circle"></i>Saved to <?=htmlspecialchars($lesson['subject_name'])?>. You can open it here anytime.</div>
+  <?php endif;?>
+
   <div class="card mb-4">
     <div class="card-body">
       <div style="font-size:0.76rem;color:var(--text-light);margin-bottom:4px"><?=htmlspecialchars($lesson['subject_name'])?></div>
@@ -134,7 +138,10 @@ include '../includes/sidebar.php';
         <div class="score-circle"><span class="score-num"></span><span class="score-denom"></span></div>
         <div style="font-size:1.6rem;font-weight:800;color:var(--primary);margin-bottom:6px" class="score-pct"></div>
         <p class="score-msg text-sm text-muted mb-6"></p>
-        <button onclick="location.reload()" class="btn btn-outline btn-pill btn-sm" style="width:auto"><i class="fas fa-redo"></i> Retake</button>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button onclick="location.reload()" class="btn btn-outline btn-pill btn-sm" style="width:auto"><i class="fas fa-redo"></i> Retake</button>
+          <a href="schedule.php" class="btn btn-primary btn-pill btn-sm" style="width:auto;padding:9px 20px"><i class="fas fa-calendar"></i> View Schedule</a>
+        </div>
       </div>
     </div>
     <?php endif; ?>

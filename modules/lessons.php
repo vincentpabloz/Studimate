@@ -181,7 +181,7 @@ include '../includes/sidebar.php';
   <?php if($success):?>
   <div class="alert alert-success mb-4"><i class="fas fa-check-circle"></i><?=htmlspecialchars($success)?></div>
   <?php if($reusedLesson):?>
-  <a class="btn btn-accent-outline btn-sm mb-4" href="ai_tools.php?lesson_id=<?=(int)$reusedLesson['id']?>">
+  <a class="btn btn-accent-outline btn-sm mb-4" href="study.php?lesson_id=<?=(int)$reusedLesson['id']?>&tab=explanation">
     Open <?=htmlspecialchars($reusedLesson['title'])?><?=htmlspecialchars($reusedLesson['subject_name']!==$sub['subject_name']?' · '.$reusedLesson['subject_name']:'')?>
   </a>
   <?php endif;?>

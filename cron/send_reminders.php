@@ -77,7 +77,7 @@ foreach ($byUser as $userId => $items) {
     $htmlItems = '';
     $textItems = '';
     foreach ($shown as $item) {
-        $link = $appUrl . '/modules/ai_tools.php?lesson_id=' . (int)$item['lesson_id'] . '&tab=quiz';
+        $link = $appUrl . '/modules/study.php?lesson_id=' . (int)$item['lesson_id'] . '&tab=quiz';
         $overdue = (strtotime($item['next_review_date']) < strtotime('today')) ? ' (overdue)' : '';
         $htmlItems .= '<li style="margin-bottom:8px"><a href="' . htmlspecialchars($link, ENT_QUOTES) . '">'
             . htmlspecialchars($item['title']) . '</a> &ndash; '

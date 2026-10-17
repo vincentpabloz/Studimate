@@ -58,7 +58,7 @@ include '../includes/sidebar.php';
           <div class="lesson-title"><?=htmlspecialchars($r['title'])?></div>
           <div class="lesson-meta"><?=htmlspecialchars($r['subject_name'])?> &bull; <?=$r['days_overdue']?> day<?=$r['days_overdue']>1?'s':''?> overdue</div>
         </div>
-        <a href="ai_tools.php?lesson_id=<?=$r['lesson_id']?>&tab=quiz" class="btn btn-danger btn-pill btn-sm" style="width:auto">
+        <a href="study.php?lesson_id=<?=$r['lesson_id']?>&tab=quiz" class="btn btn-danger btn-pill btn-sm" style="width:auto">
           Review Now
         </a>
       </div>
@@ -103,8 +103,8 @@ include '../includes/sidebar.php';
         </div>
         <div style="display:flex;align-items:center;gap:7px">
           <span class="badge <?=$bc?>"><?=$pri?></span>
-          <a href="ai_tools.php?lesson_id=<?=$r['lesson_id']?>&tab=explanation" class="btn btn-ghost btn-sm">Study</a>
-          <a href="ai_tools.php?lesson_id=<?=$r['lesson_id']?>&tab=quiz" class="btn btn-primary btn-pill btn-sm" style="width:auto">Quiz</a>
+          <a href="study.php?lesson_id=<?=$r['lesson_id']?>&tab=explanation" class="btn btn-ghost btn-sm">Study</a>
+          <a href="study.php?lesson_id=<?=$r['lesson_id']?>&tab=quiz" class="btn btn-primary btn-pill btn-sm" style="width:auto">Quiz</a>
         </div>
       </div>
       <?php endforeach;?>

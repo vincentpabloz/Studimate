@@ -243,6 +243,15 @@ function getCachedOutput(PDO $pdo,int $userId,string $type,array $lessons):?arra
 }
 
 $outputResults=[];$outputErrors=[];$wasCached=false;$saveSuccess='';
+// Unsaved generated outputs are cleared automatically after 1 minute.
+$pendingTtl=60;
+$expiredNotice='';
+foreach(($_SESSION['pending_study_outputs']??[]) as $pendingKey=>$pendingItem){
+  if(!is_array($pendingItem)||time()-(int)($pendingItem['created_at']??0)>=$pendingTtl){
+    unset($_SESSION['pending_study_outputs'][$pendingKey]);
+    $expiredNotice='Your generated outputs were cleared because they were not saved within 1 minute. Generate them again to save.';
+  }
+}
 if($_SERVER['REQUEST_METHOD']==='POST'){
   $action=$_POST['action']??'generate';
   if($action==='save_outputs'){
@@ -288,7 +297,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
           }
           $pdo->commit();
           foreach(array_keys($pendingToSave) as $type)unset($_SESSION['pending_study_outputs'][$type]);
-          header('Location: ai_tools.php?lesson_id='.(int)$pendingLesson['id'].'&tab='.urlencode($selectedType).'&saved=1');
+          $openTab=array_key_first($pendingToSave)?:'explanation';
+          header('Location: study.php?lesson_id='.(int)$pendingLesson['id'].'&tab='.urlencode($openTab).'&saved=1');
           exit;
         }catch(Throwable $error){
           if($pdo->inTransaction())$pdo->rollBack();
@@ -313,6 +323,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             'content_hash'=>(string)$lesson['content_hash'],
             'source_version'=>(int)$lesson['version'],
             'content'=>$res['content'],
+            'created_at'=>time(),
           ];
         }
       }
@@ -354,6 +365,8 @@ if($lesson){
   }
 }
 
+$showStatus=$_SERVER['REQUEST_METHOD']==='POST'||!empty($pendingSaveTypes);
+
 $pageTitle='AI Tools – StudiMate';
 $topbarTitle='AI Tools';
 include '../includes/header.php';
@@ -392,14 +405,6 @@ include '../includes/sidebar.php';
         <label class="text-sm" style="display:inline-block;margin-left:10px"><input type="checkbox" name="force_regenerate" value="1"> Generate a fresh version</label>
         <?php endif;?>
       </form>
-      <div class="study-output-tabs" role="tablist" aria-label="Study output type" style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:14px;margin-top:16px">
-        <?php foreach(['explanation'=>'Summary','quiz'=>'Quiz','flashcard'=>'Flashcards'] as $type=>$label):?>
-        <button type="button" id="tab-<?=$type?>" class="btn btn-outline btn-pill btn-sm" role="tab" aria-controls="panel-<?=$type?>" aria-selected="<?=$selectedType===$type?'true':'false'?>" onclick="showStudyOutput('<?=$type?>')" style="width:auto;<?=$selectedType===$type?'background:var(--primary);color:#fff;border-color:var(--primary)':''?>">
-          <?=htmlspecialchars($label)?>
-        </button>
-        <?php endforeach;?>
-      </div>
-      <?php if($wasCached):?><span class="badge badge-success" style="display:inline-block;margin-top:12px"><i class="fas fa-bolt"></i> Showing saved output</span><?php endif;?>
       <?php endif;?>
     </div>
   </div>
@@ -413,99 +418,41 @@ include '../includes/sidebar.php';
   </div>
 
   <?php if($saveSuccess):?><div class="alert alert-success"><i class="fas fa-check-circle"></i><?=htmlspecialchars($saveSuccess)?></div><?php endif;?>
+  <?php if($expiredNotice):?><div class="alert alert-warning"><i class="fas fa-clock"></i><?=htmlspecialchars($expiredNotice)?></div><?php endif;?>
   <?php if(isset($outputErrors['selection'])):?><div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i><?=htmlspecialchars($outputErrors['selection'])?></div><?php endif;?>
-  <?php foreach(['explanation','quiz','flashcard'] as $type):?>
-  <section id="panel-<?=$type?>" role="tabpanel" aria-labelledby="tab-<?=$type?>" style="<?=$selectedType===$type?'':'display:none'?>">
-  <?php if(isset($outputErrors[$type])):?>
-  <div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i><?=htmlspecialchars($outputErrors[$type])?></div>
-  <?php elseif(!isset($outputResults[$type])):?>
-  <div class="empty-state"><i class="fas fa-database"></i><h4>No saved <?=htmlspecialchars($type==='explanation'?'summary':$type)?> yet</h4><p>Generate this study output, then save it to keep it with this lesson.</p></div>
-  <?php elseif($type==='explanation'):?>
-  <div class="card">
-    <div class="card-header"><h3>Summary / explanation</h3></div>
-    <div class="card-body" style="line-height:1.7;font-size:0.88rem;color:var(--text-dark)">
-      <?=renderSummary($outputResults[$type])?>
-    </div>
-  </div>
-  <?php elseif($type==='quiz'):?>
-  <input type="hidden" id="lessonId" value="<?=count($selectedLessons)===1?$lesson_id:''?>">
-  <input type="hidden" id="quizCsrfToken" value="<?=htmlspecialchars($csrfToken)?>">
-  <?php if(empty($quizQs)):?>
-  <div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i>Quiz format could not be parsed. Try regenerating.</div>
-  <?php else:?>
-  <div id="quizWrap">
-    <div class="card" style="padding:24px">
-      <div style="margin-bottom:16px">
-        <div class="quiz-prog-bar"><div class="quiz-prog-fill" id="quizFill" style="width:0%"></div></div>
-        <div class="quiz-meta-row">
-          <span>Question <span id="qCurrent">1</span> / <span id="qTotal"><?=count($quizQs)?></span></span>
-          <span style="color:var(--primary);font-weight:700">StudiMate Quiz</span>
+  <?php if($showStatus):?>
+  <div class="card mb-4">
+    <div class="card-header"><h3>Generated study tools</h3></div>
+    <div class="card-body">
+      <p class="text-sm text-muted" style="margin:0 0 14px">AI Tools only generates and saves. Open the saved summary, quiz, and flashcards in the Study page. Unsaved results are cleared after 1 minute.</p>
+      <?php foreach(['explanation'=>['Summary','fa-file-alt'],'quiz'=>['Quiz','fa-question-circle'],'flashcard'=>['Flashcards','fa-clone']] as $type=>$meta):
+        if(!in_array($type,$selectedTypes,true)&&!isset($outputErrors[$type])&&!isset($pendingSaveTypes[$type]))continue;
+        $itemCount=$type==='quiz'?count($quizQs):($type==='flashcard'?count($flashcards):0);
+        $itemLabel=$itemCount?' · '.$itemCount.' '.($type==='quiz'?'questions':'cards'):'';
+        $isPending=isset($pendingSaveTypes[$type]);
+        $isSaved=isset($outputResults[$type])&&!$isPending;
+      ?>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <strong class="text-sm"><i class="fas <?=$meta[1]?>"></i> <?=$meta[0]?></strong>
+          <?php if(isset($outputErrors[$type])):?>
+          <div class="text-sm" style="color:var(--danger)"><?=htmlspecialchars($outputErrors[$type])?></div>
+          <?php elseif($isPending):?>
+          <div class="text-sm text-muted">Generated<?=htmlspecialchars($itemLabel)?> · not saved yet</div>
+          <?php elseif($isSaved):?>
+          <div class="text-sm text-muted">Saved<?=htmlspecialchars($itemLabel)?></div>
+          <?php else:?>
+          <div class="text-sm text-muted">Not generated yet</div>
+          <?php endif;?>
         </div>
+        <?php if($isSaved&&count($selectedLessons)===1):?>
+        <a class="btn btn-outline btn-pill btn-sm" style="width:auto" href="study.php?lesson_id=<?=(int)$lesson_id?>&tab=<?=$type?>">Open in Study</a>
+        <?php endif;?>
       </div>
-      <div class="quiz-q" id="qText"></div>
-      <div class="quiz-options" id="qOpts"></div>
-      <div style="display:flex;justify-content:flex-end;margin-top:18px">
-        <button id="qNext" onclick="nextQ()"
-          class="btn btn-primary btn-pill btn-sm" style="display:none;width:auto;padding:9px 22px">
-          Next <i class="fas fa-arrow-right"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-  <div id="quizResult" style="display:none">
-    <div class="card" style="padding:32px;text-align:center">
-      <div style="font-size:1rem;font-weight:700;margin-bottom:20px">Quiz Complete! 🎉</div>
-      <div class="score-circle"><span class="score-num"></span><span class="score-denom"></span></div>
-      <div style="font-size:1.6rem;font-weight:800;color:var(--primary);margin-bottom:6px" class="score-pct"></div>
-      <p class="score-msg text-sm text-muted mb-6"></p>
-      <div style="display:flex;gap:10px;justify-content:center">
-        <button onclick="location.reload()" class="btn btn-outline btn-pill btn-sm" style="width:auto">
-          <i class="fas fa-redo"></i> Retake
-        </button>
-        <a href="../modules/schedule.php" class="btn btn-primary btn-pill btn-sm" style="width:auto;padding:9px 20px">
-          <i class="fas fa-calendar"></i> View Schedule
-        </a>
-      </div>
+      <?php endforeach;?>
     </div>
   </div>
   <?php endif;?>
-  <?php elseif($type==='flashcard'):?>
-  <?php if(empty($flashcards)):?>
-  <div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i>Flashcards could not be parsed. Try regenerating.</div>
-  <?php else:?>
-  <div class="card" style="padding:20px">
-    <div style="text-align:center;font-size:0.78rem;font-weight:600;color:var(--text-light);margin-bottom:6px">
-      Card <span id="fcNum">1</span> of <?=count($flashcards)?>
-    </div>
-    <?php foreach($flashcards as $fi=>$fc):?>
-    <div class="fc-scene" id="fc<?=$fi?>" onclick="this.classList.toggle('flipped')"
-         style="<?=$fi>0?'display:none':''?>">
-      <div class="fc-inner">
-        <div class="fc-front">
-          <div class="fc-label">Question</div>
-          <div class="fc-text"><?=htmlspecialchars($fc['front'])?></div>
-        </div>
-        <div class="fc-back">
-          <div class="fc-label">Answer</div>
-          <div class="fc-text"><?=htmlspecialchars($fc['back'])?></div>
-        </div>
-      </div>
-    </div>
-    <?php endforeach;?>
-    <p class="fc-hint">Click card to flip &bull; Use arrow keys to navigate</p>
-    <div style="display:flex;justify-content:center;gap:10px;margin-top:14px">
-      <button class="btn btn-outline btn-pill btn-sm" style="width:auto" onclick="fcNav(-1)">
-        <i class="fas fa-arrow-left"></i> Prev
-      </button>
-      <button class="btn btn-primary btn-pill btn-sm" style="width:auto;padding:9px 20px" onclick="fcNav(1)">
-        Next <i class="fas fa-arrow-right"></i>
-      </button>
-    </div>
-  </div>
-  <?php endif;?>
-  <?php endif;?>
-  </section>
-  <?php endforeach;?>
   <?php if($pendingSaveTypes):?>
   <form method="POST" class="mb-4" style="margin-top:16px">
     <input type="hidden" name="csrf_token" value="<?=htmlspecialchars($csrfToken)?>">
@@ -518,7 +465,7 @@ include '../includes/sidebar.php';
     <button type="submit" class="btn btn-primary btn-pill btn-sm" style="width:auto">
       <i class="fas fa-save"></i> Save to Subject
     </button>
-    <span class="text-sm text-muted" style="margin-left:8px">Saves only the generated outputs for this lesson.</span>
+    <span class="text-sm text-muted" style="margin-left:8px">Saves the generated outputs, then opens them in the Study page.</span>
   </form>
   <?php endif;?>
   <?php endif;?>
@@ -526,12 +473,8 @@ include '../includes/sidebar.php';
 </div>
 
 <?php
-$fcTotal=count($flashcards);
-$qJson=!empty($quizQs)?(json_encode($quizQs,JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_AMP|JSON_HEX_QUOT)?:'[]'):'[]';
-$extraJs="window.showStudyOutput=function(type){['explanation','quiz','flashcard'].forEach(function(name){var tab=document.getElementById('tab-'+name);var panel=document.getElementById('panel-'+name);var active=name===type;if(tab){tab.setAttribute('aria-selected',active?'true':'false');tab.style.background=active?'var(--primary)':'';tab.style.color=active?'#fff':'';tab.style.borderColor=active?'var(--primary)':'';}if(panel)panel.style.display=active?'block':'none';});};if(typeof initFlashcards==='function'){initFlashcards($fcTotal);}else{fcTotal=$fcTotal;fcIdx=0;}".(!empty($quizQs)?"document.addEventListener('DOMContentLoaded',()=>initQuiz($qJson));":"");
-// Keyboard nav for flashcards
-if(!empty($flashcards)){
-  $extraJs.="document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')fcNav(1);else if(e.key==='ArrowLeft')fcNav(-1);else if(e.key===' '){e.preventDefault();const s=document.getElementById('fc'+fcIdx);if(s)s.classList.toggle('flipped')}});";
+if(!empty($pendingSaveTypes)){
+  $extraJs="setTimeout(function(){window.location.href='ai_tools.php?lesson_id=".(int)$lesson_id."';},".(($pendingTtl+2)*1000).");";
 }
 include '../includes/footer.php';
 ?>

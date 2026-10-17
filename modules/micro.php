@@ -170,7 +170,7 @@ function renderFinish(){
   p.style.cssText='font-size:0.9rem;color:var(--text-mid);margin:0 0 16px';
   box.appendChild(p);
   var a=h('a','btn btn-primary btn-pill','Take the full quiz');
-  a.href='ai_tools.php?lesson_id='+encodeURIComponent(D.lessonId)+'&tab=quiz';a.style.cssText='width:auto;display:inline-flex';
+  a.href='study.php?lesson_id='+encodeURIComponent(D.lessonId)+'&tab=quiz';a.style.cssText='width:auto;display:inline-flex';
   box.appendChild(a);
   elUnit.appendChild(box);
 }
