@@ -1,10 +1,11 @@
 <?php
 session_start();
-if(isset($_SESSION['user_id'])){header("Location: dashboard.php");exit;}
+if(isset($_SESSION['user_id'])){header("Location: ".((($_SESSION['user_role']??'')==='admin')?"modules/admin.php":"dashboard.php"));exit;}
 require 'config/db.php';
 $csrfToken=$_SESSION['csrf_token']??bin2hex(random_bytes(32));
 $_SESSION['csrf_token']=$csrfToken;
 $error='';
+if(isset($_GET['deactivated']))$error='This account has been deactivated. Please contact the administrator.';
 if($_SERVER['REQUEST_METHOD']==='POST'){
   $email=trim($_POST['email']??'');
   $pass=$_POST['password']??'';
@@ -18,14 +19,17 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $s=$pdo->prepare("SELECT * FROM users WHERE email=?");
     $s->execute([$email]);
     $user=$s->fetch();
-    if($user&&password_verify($pass,$user['password'])){
+    if($user&&password_verify($pass,$user['password'])&&array_key_exists('is_active',$user)&&!(int)$user['is_active']){
+      $error='This account has been deactivated. Please contact the administrator.';
+    }elseif($user&&password_verify($pass,$user['password'])){
       session_regenerate_id(true); // prevent session fixation
       unset($_SESSION['login_fail'],$_SESSION['login_lock_until']);
       $_SESSION['user_id']=$user['id'];
       $_SESSION['user_name']=$user['name'];
       $_SESSION['user_email']=$user['email'];
       $_SESSION['user_role']=$user['role'];
-      header("Location: dashboard.php");exit;
+      try{$pdo->prepare('UPDATE users SET last_login_at=NOW() WHERE id=?')->execute([$user['id']]);}catch(PDOException $e){/* column not created yet */}
+      header("Location: ".($user['role']==='admin'?"modules/admin.php":"dashboard.php"));exit;
     }else{
       $_SESSION['login_fail']=($_SESSION['login_fail']??0)+1;
       if($_SESSION['login_fail']>=5){$_SESSION['login_lock_until']=time()+300;$_SESSION['login_fail']=0;}

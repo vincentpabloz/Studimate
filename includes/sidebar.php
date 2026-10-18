@@ -64,6 +64,12 @@ if(isset($pdo,$_SESSION['user_id'])){
         <?php if(isActive('profile.php')==='active'):?><span class="nav-dot"></span><?php endif;?>
       </a>
     </div>
+    <div class="nav-item">
+      <a href="<?=$base??''?>modules/evaluate.php" class="<?=isActive('evaluate.php')?>">
+        <i class="fas fa-star"></i> Rate StudiMate
+        <?php if(isActive('evaluate.php')==='active'):?><span class="nav-dot"></span><?php endif;?>
+      </a>
+    </div>
   </nav>
 
   <div class="sidebar-user">

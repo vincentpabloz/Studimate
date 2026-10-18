@@ -4,6 +4,7 @@ if(!isset($_SESSION['user_id'])){header("Location: ../index.php");exit;}
 require '../config/db.php';
 require '../includes/content_helpers.php';
 require '../includes/micro_helpers.php';
+require_once '../includes/admin_helpers.php';
 require_once '../config/env.php';
 $uid=(int)$_SESSION['user_id'];$base='../';
 
@@ -34,12 +35,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   }else{
     $force=!empty($_POST['force_regenerate']);
     if(!$force&&microLoad($pdo,$lesson)!==null){
-      $notice='Showing the saved microlearning units. No AI request was needed.';
+      $notice='Showing the saved microlearning units. No AI request was needed.';logActivity($pdo,$uid,'microlearning','cache');
     }elseif(!$AI_KEY){
       $error='AI is not configured. Add GEMINI_API_KEY to the .env file.';
     }else{
       $genError=null;
       $generated=microGenerate($pdo,$uid,$lesson,$AI_KEY,$genError);
+      logActivity($pdo,$uid,'microlearning','ai',$generated===null?'error':'ok',$genError);
       if($generated===null){
         $error=$genError??'AI could not generate the units. Try again.';
       }else{

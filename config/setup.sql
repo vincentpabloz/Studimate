@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS users (
     notif_reviews TINYINT(1) DEFAULT 1,
     notif_quizzes TINYINT(1) DEFAULT 0,
     unsubscribe_token CHAR(64) DEFAULT NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    last_login_at DATETIME DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY unique_unsubscribe_token (unsubscribe_token)
 );
@@ -191,4 +193,36 @@ CREATE TABLE IF NOT EXISTS micro_progress (
     UNIQUE KEY unique_micro_progress (user_id, lesson_id, source_version, unit_index),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
+);
+
+-- Administrator dashboard: activity log and evaluation (ISO/IEC 25010) ratings
+CREATE TABLE IF NOT EXISTS activity_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT DEFAULT NULL,
+    kind VARCHAR(30) NOT NULL,
+    source VARCHAR(10) NOT NULL,
+    status ENUM('ok','error') NOT NULL DEFAULT 'ok',
+    message VARCHAR(255) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_activity_kind (kind, created_at)
+);
+
+CREATE TABLE IF NOT EXISTS evaluations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    respondent_type ENUM('student','expert') NOT NULL,
+    comments TEXT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_evaluation_user (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS evaluation_scores (
+    evaluation_id INT NOT NULL,
+    item_key VARCHAR(10) NOT NULL,
+    characteristic VARCHAR(40) NOT NULL,
+    score TINYINT NOT NULL,
+    PRIMARY KEY (evaluation_id, item_key),
+    FOREIGN KEY (evaluation_id) REFERENCES evaluations(id) ON DELETE CASCADE
 );

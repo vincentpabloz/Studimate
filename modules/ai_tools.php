@@ -4,6 +4,7 @@ if(!isset($_SESSION['user_id'])){header("Location: ../index.php");exit;}
 require '../config/db.php';
 require '../includes/content_helpers.php';
 require '../includes/study_helpers.php';
+require_once '../includes/admin_helpers.php';
 require_once '../config/env.php';
 $uid=$_SESSION['user_id'];$base='../';
 
@@ -313,6 +314,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     foreach($selectedTypes as $type){
       unset($_SESSION['pending_study_outputs'][$type]);
       $res=getOrGen($pdo,$uid,$type,$selectedLessons,$AI_KEY,$force,$wanted[$type]??null);
+      logActivity($pdo,(int)$uid,$type,!empty($res['cached'])?'cache':'ai',empty($res['error'])?'ok':'error',$res['error']??null);
       if($res['content']!==null){
         $outputResults[$type]=$res['content'];
         if(!$res['cached']){
