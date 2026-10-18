@@ -478,7 +478,7 @@ include '../includes/sidebar.php';
       Card <span id="fcNum">1</span> of <?=count($flashcards)?>
     </div>
     <?php foreach($flashcards as $fi=>$fc):?>
-    <div class="fc-scene" id="fc<?=$fi?>" onclick="this.classList.toggle('flipped')"
+    <div class="fc-scene" id="fc<?=$fi?>"
          style="<?=$fi>0?'display:none':''?>">
       <div class="fc-inner">
         <div class="fc-front">

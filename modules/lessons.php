@@ -133,20 +133,21 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 $pendingLesson=$_SESSION['pending_lesson']??null;
 if($pendingLesson&&$pendingLesson['subject_id']===$sid)$similarLesson=$pendingLesson['similar'];
 
-// Fetch lessons with tool count and quiz avg
+// Fetch each lesson's first and latest quiz scores to show progress over time.
 $lessons=$pdo->prepare("
   SELECT l.*,
     (SELECT COUNT(*) FROM study_tools WHERE lesson_id=l.id) as tool_count,
-    (SELECT ROUND(AVG((score/total)*100)) FROM quiz_results WHERE lesson_id=l.id AND user_id=? AND total>0) as avg_score,
-    (SELECT COUNT(*) FROM quiz_results WHERE lesson_id=l.id AND user_id=?) as attempts
+    (SELECT ROUND(score*100/total) FROM quiz_results WHERE lesson_id=l.id AND user_id=? AND total>0 ORDER BY taken_at ASC,id ASC LIMIT 1) as first_score,
+    (SELECT ROUND(score*100/total) FROM quiz_results WHERE lesson_id=l.id AND user_id=? AND total>0 ORDER BY taken_at DESC,id DESC LIMIT 1) as latest_score,
+    (SELECT COUNT(*) FROM quiz_results WHERE lesson_id=l.id AND user_id=? AND total>0) as attempts
   FROM lessons l WHERE l.subject_id=? ORDER BY l.uploaded_at DESC
 ");
-$lessons->execute([$uid,$uid,$sid]);$lessonList=$lessons->fetchAll();
+$lessons->execute([$uid,$uid,$uid,$sid]);$lessonList=$lessons->fetchAll();
 
 // Compute subject progress
 $doneCount=count(array_filter($lessonList,fn($l)=>$l['attempts']>0));
 $pct=count($lessonList)>0?round(($doneCount/count($lessonList))*100):0;
-$avgAll=count($lessonList)>0?round(array_sum(array_column($lessonList,'avg_score'))/max(1,count(array_filter($lessonList,fn($l)=>$l['avg_score']>0)))):0;
+$improvedCount=count(array_filter($lessonList,fn($l)=>(int)$l['attempts']>1&&(int)$l['latest_score']>(int)$l['first_score']));
 
 $pageTitle=htmlspecialchars($sub['subject_name']).' – StudiMate';
 $topbarTitle=htmlspecialchars($sub['subject_name']);
@@ -164,7 +165,7 @@ include '../includes/sidebar.php';
   <div class="subject-hero" style="background:linear-gradient(135deg,<?=htmlspecialchars($sub['color'])?>,<?=htmlspecialchars($sub['color'])?>cc)">
     <div class="subject-hero-code"><?=htmlspecialchars($sub['subject_code']??'')?></div>
     <div class="subject-hero-name"><?=htmlspecialchars($sub['subject_name'])?></div>
-    <div class="subject-hero-meta"><?=count($lessonList)?> lesson<?=count($lessonList)!=1?'s':''?> &middot; <?=$pct?>% done<?=$avgAll?' &middot; Avg '.$avgAll.'%':''?></div>
+    <div class="subject-hero-meta"><?=count($lessonList)?> lesson<?=count($lessonList)!=1?'s':''?> &middot; <?=$pct?>% done &middot; <?=$improvedCount?> improved since first attempt</div>
     <div class="subject-hero-bar">
       <div class="subject-hero-fill" style="width:<?=$pct?>%"></div>
     </div>
@@ -223,8 +224,10 @@ include '../includes/sidebar.php';
       <?php else:?>
       <?php foreach($lessonList as $l):
         $hasTools=$l['tool_count']>0;
-        $avgS=(int)$l['avg_score'];
-        $scoreColor=$avgS>=80?'var(--success)':($avgS>=50?'var(--warning)':'var(--danger)');
+        $firstScore=$l['first_score']!==null?(int)$l['first_score']:null;
+        $latestScore=$l['latest_score']!==null?(int)$l['latest_score']:null;
+        $scoreChange=$firstScore!==null&&$latestScore!==null?$latestScore-$firstScore:0;
+        $scoreColor=$scoreChange>0?'var(--success)':($scoreChange<0?'var(--danger)':'var(--text-mid)');
       ?>
       <div style="display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--border)">
         <div style="width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
@@ -235,7 +238,14 @@ include '../includes/sidebar.php';
           <div style="font-size:0.86rem;font-weight:600;color:var(--text-dark)"><?=htmlspecialchars($l['title'])?></div>
           <div style="font-size:0.72rem;color:var(--text-light)">
             <?=$l['attempts']?> quiz<?=$l['attempts']!=1?'zes':''?>
-            <?php if($l['avg_score']):?>&bull; Avg <span style="color:<?=$scoreColor?>;font-weight:700"><?=$avgS?>%</span><?php endif;?>
+            <?php if($firstScore!==null):?>
+              &bull; First <?=$firstScore?>% &rarr; Latest <?=$latestScore?>%
+              <?php if((int)$l['attempts']>1):?>
+                &bull; <span style="color:<?=$scoreColor?>;font-weight:700"><?=$scoreChange>0?'+':''?><?=$scoreChange?> pts</span>
+              <?php else:?>
+                &bull; <span>First attempt</span>
+              <?php endif;?>
+            <?php endif;?>
           </div>
         </div>
         <div style="display:flex;gap:6px;align-items:center">

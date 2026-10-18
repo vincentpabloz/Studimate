@@ -6,6 +6,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 require '../config/db.php';
 require '../includes/study_helpers.php';
+require '../includes/quiz_retake.php';
 
 $uid = (int)$_SESSION['user_id'];
 $lessonId = (int)($_GET['lesson_id'] ?? 0);
@@ -39,9 +40,7 @@ $documentQuery = $pdo->prepare('
 $documentQuery->execute([$lessonId, (int)$lesson['subject_id'], $uid]);
 $document = $documentQuery->fetch() ?: null;
 
-$resultsQuery = $pdo->prepare('SELECT score,total,taken_at FROM quiz_results WHERE lesson_id=? AND user_id=? ORDER BY taken_at DESC,id DESC LIMIT 5');
-$resultsQuery->execute([$lessonId, $uid]);
-$quizResults = $resultsQuery->fetchAll();
+$quizStatus = quizAttemptStatus($pdo, $uid, $lessonId);
 
 $tabs = ['file' => 'Uploaded File', 'explanation' => 'Summary', 'quiz' => 'Quiz', 'flashcard' => 'Flashcards'];
 $activeTab = $_GET['tab'] ?? 'file';
@@ -113,43 +112,9 @@ include '../includes/sidebar.php';
     <?php elseif (!$quizQuestions): ?>
     <div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> The saved quiz format could not be read.</div>
     <?php else: ?>
-    <input type="hidden" id="lessonId" value="<?=$lessonId?>">
-    <input type="hidden" id="quizCsrfToken" value="<?=htmlspecialchars($csrfToken)?>">
-    <div id="quizWrap">
-      <div class="card" style="padding:24px">
-        <div style="margin-bottom:16px">
-          <div class="quiz-prog-bar"><div class="quiz-prog-fill" id="quizFill" style="width:0%"></div></div>
-          <div class="quiz-meta-row"><span>Question <span id="qCurrent">1</span> / <span id="qTotal"><?=count($quizQuestions)?></span></span><span style="color:var(--primary);font-weight:700">StudiMate Quiz</span></div>
-        </div>
-        <div class="quiz-q" id="qText"></div>
-        <div class="quiz-options" id="qOpts"></div>
-        <div style="display:flex;justify-content:flex-end;margin-top:18px">
-          <button id="qNext" onclick="nextQ()" class="btn btn-primary btn-pill btn-sm" style="display:none;width:auto;padding:9px 22px">Next <i class="fas fa-arrow-right"></i></button>
-        </div>
-      </div>
-    </div>
-    <div id="quizResult" style="display:none">
-      <div class="card" style="padding:32px;text-align:center">
-        <div style="font-size:1rem;font-weight:700;margin-bottom:20px">Quiz Complete!</div>
-        <div class="score-circle"><span class="score-num"></span><span class="score-denom"></span></div>
-        <div style="font-size:1.6rem;font-weight:800;color:var(--primary);margin-bottom:6px" class="score-pct"></div>
-        <p class="score-msg text-sm text-muted mb-6"></p>
-        <button onclick="location.reload()" class="btn btn-outline btn-pill btn-sm" style="width:auto"><i class="fas fa-redo"></i> Retake</button>
-      </div>
-    </div>
-    <?php endif; ?>
-    <?php if ($quizResults): ?>
-    <div class="card" style="margin-top:16px">
-      <div class="card-header"><h3>Recent quiz results</h3></div>
-      <div class="card-body">
-        <?php foreach ($quizResults as $result): ?>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">
-          <span class="text-sm"><?=htmlspecialchars(date('M j, Y g:i A', strtotime($result['taken_at'])))?></span>
-          <strong><?= (int)$result['score'] ?> / <?= (int)$result['total'] ?> (<?= (int)round(((int)$result['score'] / max(1, (int)$result['total'])) * 100) ?>%)</strong>
-        </div>
-        <?php endforeach; ?>
-      </div>
-    </div>
+    <button type="button" class="study-launch btn btn-primary btn-pill" onclick="window.openStudyMode('quiz')">
+      <i class="fas fa-play" aria-hidden="true"></i> Open quiz (<?=count($quizQuestions)?> questions)
+    </button>
     <?php endif; ?>
   </section>
 
@@ -159,35 +124,82 @@ include '../includes/sidebar.php';
     <?php elseif (!$flashcards): ?>
     <div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> The saved flashcards format could not be read.</div>
     <?php else: ?>
-    <div class="card" style="padding:20px">
-      <div style="text-align:center;font-size:0.78rem;font-weight:600;color:var(--text-light);margin-bottom:6px">Card <span id="fcNum">1</span> of <?=count($flashcards)?></div>
-      <?php foreach ($flashcards as $index => $card): ?>
-      <div class="fc-scene" id="fc<?=$index?>" onclick="this.classList.toggle('flipped')" style="<?=$index > 0 ? 'display:none' : ''?>">
-        <div class="fc-inner">
-          <div class="fc-front"><div class="fc-label">Question</div><div class="fc-text"><?=htmlspecialchars($card['front'])?></div></div>
-          <div class="fc-back"><div class="fc-label">Answer</div><div class="fc-text"><?=htmlspecialchars($card['back'])?></div></div>
-        </div>
-      </div>
-      <?php endforeach; ?>
-      <p class="fc-hint">Click card to flip · Use arrow keys to navigate</p>
-      <div style="display:flex;justify-content:center;gap:10px;margin-top:14px">
-        <button class="btn btn-outline btn-pill btn-sm" style="width:auto" onclick="fcNav(-1)"><i class="fas fa-arrow-left"></i> Prev</button>
-        <button class="btn btn-primary btn-pill btn-sm" style="width:auto;padding:9px 20px" onclick="fcNav(1)">Next <i class="fas fa-arrow-right"></i></button>
-      </div>
-    </div>
+    <button type="button" class="study-launch btn btn-primary btn-pill" onclick="window.openStudyMode('flashcard')">
+      <i class="fas fa-clone" aria-hidden="true"></i> Open flashcards (<?=count($flashcards)?> cards)
+    </button>
     <?php endif; ?>
   </section>
 </div>
 
+<?php if ($quizQuestions || $flashcards): ?>
+<div class="modal-overlay study-modal-overlay" id="studyModal" aria-hidden="true">
+  <section class="modal-box study-modal" role="dialog" aria-modal="true" aria-labelledby="studyModalTitle" aria-describedby="studyModalSubtitle" tabindex="-1">
+    <header class="modal-header study-modal-header">
+      <div class="study-heading">
+        <h2 id="studyModalTitle"></h2>
+        <p id="studyModalSubtitle"><?=htmlspecialchars($lesson['title'], ENT_QUOTES, 'UTF-8')?></p>
+      </div>
+      <div class="study-header-actions">
+        <span class="study-progress-pill" id="studyProgressPill"></span>
+        <button type="button" class="modal-close study-close" id="studyClose" aria-label="Close study dialog">
+          <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="study-progress-track" aria-hidden="true"><span id="studyProgressBar"></span></div>
+    </header>
+    <div class="modal-body study-modal-body">
+      <div id="studyQuizMode" class="study-mode" hidden>
+        <div id="studyQuizLoading" class="study-status" role="status">Checking quiz retake eligibility…</div>
+        <div id="studyQuizQuestion" hidden>
+          <h3 class="study-question" id="studyQuestion"></h3>
+          <div class="study-options" id="studyOptions"></div>
+          <div class="study-feedback" id="studyFeedback" aria-live="polite"></div>
+        </div>
+        <section id="studyQuizResults" class="study-results" aria-live="polite" hidden>
+          <div class="study-results-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></div>
+          <h3 id="studyResultsHeading">Quiz results</h3>
+          <div class="study-score" id="studyScore"></div>
+          <div class="study-percentage" id="studyPercentage"></div>
+          <p class="study-result-message" id="studyResultMessage"></p>
+          <div class="study-cooldown" id="studyCooldown" hidden>
+            <strong id="studyCooldownRule"></strong>
+            <span id="studyCooldownDate"></span>
+            <span id="studyCountdown" role="status" aria-live="polite"></span>
+          </div>
+          <p class="study-last-attempt" id="studyLastAttempt"></p>
+          <p class="study-save-error" id="studySaveError" role="alert" hidden></p>
+          <div class="study-history" id="studyHistory"></div>
+          <button type="button" class="btn btn-primary btn-pill study-retake" id="studyRetake" hidden></button>
+        </section>
+      </div>
+      <div id="studyFlashcardMode" class="study-mode" hidden>
+        <?php foreach ($flashcards as $index => $card): ?>
+        <div class="fc-scene study-fc-scene" id="studyFc<?=$index?>" role="button" tabindex="-1" aria-pressed="false" aria-label="Flashcard question: <?=htmlspecialchars($card['front'], ENT_QUOTES, 'UTF-8')?>. Flip to reveal the answer" onclick="window.flipStudyCard(this)">
+          <div class="fc-inner">
+            <div class="fc-front"><div class="fc-label">Question</div><div class="fc-text"><?=htmlspecialchars($card['front'], ENT_QUOTES, 'UTF-8')?></div></div>
+            <div class="fc-back" hidden><div class="fc-label">Answer</div><div class="fc-text"><?=htmlspecialchars($card['back'], ENT_QUOTES, 'UTF-8')?></div></div>
+          </div>
+        </div>
+        <?php endforeach; ?>
+        <p class="fc-hint">Click card to flip · Use arrow keys to navigate</p>
+      </div>
+    </div>
+    <footer class="modal-footer study-modal-footer" id="studyModalFooter">
+      <button type="button" class="btn btn-outline btn-pill" id="studyPrev"><i class="fas fa-arrow-left" aria-hidden="true"></i> Prev</button>
+      <button type="button" class="btn btn-primary btn-pill" id="studyNext">Next <i class="fas fa-arrow-right" aria-hidden="true"></i></button>
+    </footer>
+  </section>
+</div>
+<?php endif; ?>
+
 <?php
 $quizJson = json_encode($quizQuestions, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
 $flashcardCount = count($flashcards);
-$extraJs = "window.showStudyTab=function(key){['file','explanation','quiz','flashcard'].forEach(function(name){var tab=document.getElementById('study-tab-'+name);var panel=document.getElementById('study-panel-'+name);var active=name===key;if(tab){tab.setAttribute('aria-selected',active?'true':'false');tab.style.background=active?'var(--primary)':'';tab.style.color=active?'#fff':'';tab.style.borderColor=active?'var(--primary)':'';}if(panel)panel.style.display=active?'block':'none';});history.replaceState(null,'','study.php?lesson_id=".$lessonId."&tab='+encodeURIComponent(key));};fcTotal=".$flashcardCount.";fcIdx=0;";
-if ($quizQuestions) {
-    $extraJs .= "document.addEventListener('DOMContentLoaded',function(){initQuiz(" . ($quizJson ?: '[]') . ");});";
-}
-if ($flashcards) {
-    $extraJs .= "document.addEventListener('keydown',function(event){if(event.key==='ArrowRight')fcNav(1);else if(event.key==='ArrowLeft')fcNav(-1);else if(event.key===' '){event.preventDefault();var card=document.getElementById('fc'+fcIdx);if(card)card.classList.toggle('flipped');}});";
+$quizStatusJson = json_encode($quizStatus, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
+$extraJs = 'window.showStudyTab=function(key){["file","explanation","quiz","flashcard"].forEach(function(name){var tab=document.getElementById("study-tab-"+name);var panel=document.getElementById("study-panel-"+name);var active=name===key;if(tab){tab.setAttribute("aria-selected",active?"true":"false");tab.style.background=active?"var(--primary)":"";tab.style.color=active?"#fff":"";tab.style.borderColor=active?"var(--primary)":"";}if(panel)panel.style.display=active?"block":"none";});history.replaceState(null,"","study.php?lesson_id='. $lessonId .'&tab="+encodeURIComponent(key));};';
+if ($quizQuestions || $flashcards) {
+    $extraJs .= 'initStudyModal('.($quizJson ?: '[]').','.($quizStatusJson ?: '{"attempts":[],"latest":null,"eligible":true}').','.$flashcardCount.','. $lessonId .','
+        .json_encode($csrfToken, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT).');';
 }
 include '../includes/footer.php';
 ?>

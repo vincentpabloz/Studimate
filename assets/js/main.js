@@ -85,8 +85,8 @@ function initColorPicker(){
 function confirmDelete(url,name){if(confirm(`Delete "${name}"? This cannot be undone.`))window.location.href=url}
 
 // ---- QUIZ ----
-let qData=[],qIdx=0,qScore=0,qAnswered=false;
-function initQuiz(data){qData=data;qIdx=0;qScore=0;qAnswered=false;renderQ()}
+let qData=[],qIdx=0,qScore=0,qAnswered=false,qAnswers=[];
+function initQuiz(data){qData=data;qIdx=0;qScore=0;qAnswered=false;qAnswers=Array(data.length).fill(null);renderQ()}
 function renderQ(){
   if(qIdx>=qData.length){showResult();return}
   const q=qData[qIdx];qAnswered=false;
@@ -108,6 +108,7 @@ function renderQ(){
 }
 function selectAns(el,idx,correct){
   if(qAnswered)return; qAnswered=true;
+  qAnswers[qIdx]=idx;
   document.querySelectorAll('.quiz-opt').forEach((o,i)=>{
     if(i===correct)o.classList.add('correct');
     else if(i===idx&&idx!==correct)o.classList.add('wrong');
@@ -132,7 +133,7 @@ function showResult(){
     const lid=document.getElementById('lessonId');
     if(lid){
       const csrf=document.getElementById('quizCsrfToken');
-      fetch('save_quiz.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lesson_id:lid.value,score:qScore,total:qData.length,csrf_token:csrf?csrf.value:''})})
+      fetch('save_quiz.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lesson_id:lid.value,answers:qAnswers,csrf_token:csrf?csrf.value:''})})
         .then(r=>r.json()).then(d=>{if(d.success)showToast('Score saved!');else showToast(d.error||'Could not save quiz result.','error')})
         .catch(()=>showToast('Could not save quiz result. Please try again.','error'));
     }
@@ -147,6 +148,432 @@ function fcNav(dir){
   const nxt=document.getElementById('fc'+fcIdx);if(nxt)nxt.style.display='block';
   const n=document.getElementById('fcNum');if(n)n.textContent=fcIdx+1;
   document.querySelectorAll('.fc-scene').forEach(s=>s.classList.remove('flipped'));
+}
+
+// ---- STUDY MODAL ----
+let studyQuestions=[],studyAnswers=[],studyCardCount=0,studyQuestionIndex=0,studyCardIndex=0;
+let studyLessonId=0,studyCsrfToken='',studyStatus=null,studyMode='',studyReturnFocus=null;
+let studyCountdownTimer=null,studyCountdownSeconds=0,studyModalBodyOverflow='',studyRequestId=0;
+
+function initStudyModal(questions,status,cardCount,lessonId,csrfToken){
+  studyQuestions=questions;studyStatus=status;studyCardCount=cardCount;
+  studyLessonId=lessonId;studyCsrfToken=csrfToken;
+  const modal=document.getElementById('studyModal');
+  if(!modal)return;
+  document.getElementById('studyClose').addEventListener('click',closeStudyModal);
+  document.getElementById('studyPrev').addEventListener('click',studyPrevious);
+  document.getElementById('studyNext').addEventListener('click',studyNext);
+  document.getElementById('studyRetake').addEventListener('click',startStudyQuiz);
+  modal.addEventListener('click',event=>{if(event.target===modal)closeStudyModal()});
+  modal.addEventListener('keydown',handleStudyKeys);
+}
+
+function openStudyMode(mode){
+  const modal=document.getElementById('studyModal');
+  if(!modal)return;
+  studyReturnFocus=document.activeElement;
+  const requestId=++studyRequestId;
+  studyMode=mode;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+  studyModalBodyOverflow=document.body.style.overflow;
+  document.body.style.overflow='hidden';
+  document.getElementById('studyQuizMode').hidden=mode!=='quiz';
+  document.getElementById('studyFlashcardMode').hidden=mode!=='flashcard';
+  document.getElementById('studyModalFooter').hidden=false;
+  document.getElementById('studyModalTitle').textContent=mode==='quiz'?'Quiz':'Flashcards';
+  if(mode==='flashcard'){
+    studyCardIndex=0;
+    document.querySelectorAll('.study-fc-scene').forEach((card,index)=>{
+      card.hidden=index!==0;
+      card.classList.remove('flipped');
+      card.setAttribute('aria-pressed','false');
+      card.tabIndex=index===0?0:-1;
+      setStudyCardSide(card,false,false);
+    });
+    updateStudyNavigation();
+  }else{
+    document.getElementById('studyModalFooter').hidden=true;
+    document.getElementById('studyQuizLoading').hidden=false;
+    document.getElementById('studyQuizQuestion').hidden=true;
+    document.getElementById('studyQuizResults').hidden=true;
+    document.getElementById('studyProgressPill').textContent='Checking eligibility';
+    document.getElementById('studyProgressBar').style.width='0%';
+    fetchQuizStatus(requestId);
+  }
+  modal.focus();
+}
+window.openStudyMode=openStudyMode;
+
+function closeStudyModal(){
+  const modal=document.getElementById('studyModal');
+  if(!modal)return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden','true');
+  studyRequestId++;
+  document.body.style.overflow=studyModalBodyOverflow;
+  if(studyCountdownTimer){clearInterval(studyCountdownTimer);studyCountdownTimer=null}
+  if(studyReturnFocus&&typeof studyReturnFocus.focus==='function')studyReturnFocus.focus();
+}
+
+async function fetchQuizStatus(requestId=++studyRequestId){
+  try{
+    const response=await fetch(`quiz_status.php?lesson_id=${encodeURIComponent(studyLessonId)}`,{headers:{'Accept':'application/json'}});
+    const data=await response.json();
+    if(!response.ok||!data.success)throw new Error(data.error||'Could not check quiz eligibility.');
+    if(requestId!==studyRequestId||studyMode!=='quiz'||!document.getElementById('studyModal').classList.contains('open'))return;
+    studyStatus=data;
+    showStudyEligibility();
+  }catch(error){
+    if(requestId!==studyRequestId||studyMode!=='quiz'||!document.getElementById('studyModal').classList.contains('open'))return;
+    document.getElementById('studyQuizLoading').hidden=true;
+    document.getElementById('studyQuizResults').hidden=false;
+    document.getElementById('studyResultsHeading').textContent='Unable to check retake eligibility';
+    document.getElementById('studySaveError').textContent=error.message||'Could not check quiz eligibility. Please try again.';
+    document.getElementById('studySaveError').hidden=false;
+    document.getElementById('studyRetake').hidden=true;
+    document.getElementById('studyProgressPill').textContent='Eligibility unavailable';
+    document.getElementById('studyModalFooter').hidden=true;
+  }
+}
+
+function showStudyEligibility(){
+  const latest=studyStatus.latest;
+  document.getElementById('studyQuizLoading').hidden=true;
+  document.getElementById('studyQuizQuestion').hidden=true;
+  document.getElementById('studyQuizResults').hidden=false;
+  document.getElementById('studyModalFooter').hidden=true;
+  if(!latest){
+    document.getElementById('studyResultsHeading').textContent='Ready to begin?';
+    document.getElementById('studyScore').textContent='';
+    document.getElementById('studyPercentage').textContent='';
+    document.getElementById('studyResultMessage').textContent='Answer each question to see your score and retake schedule.';
+    document.getElementById('studyCooldown').hidden=true;
+    document.getElementById('studyLastAttempt').textContent='';
+    document.getElementById('studyHistory').replaceChildren();
+    const button=document.getElementById('studyRetake');
+    button.textContent='Start Quiz';
+    button.hidden=false;
+    document.getElementById('studyProgressPill').textContent='Ready';
+    document.getElementById('studyProgressBar').style.width='0%';
+    return;
+  }
+  renderStudyResults(latest.score,latest.total,studyStatus);
+}
+
+function startStudyQuiz(){
+  if(studyCountdownTimer){clearInterval(studyCountdownTimer);studyCountdownTimer=null}
+  studyMode='quiz';
+  studyQuestionIndex=0;
+  studyAnswers=Array(studyQuestions.length).fill(null);
+  document.getElementById('studyQuizResults').hidden=true;
+  document.getElementById('studyQuizQuestion').hidden=false;
+  document.getElementById('studyModalFooter').hidden=false;
+  renderStudyQuestion();
+  document.getElementById('studyOptions').querySelector('button')?.focus();
+}
+
+function renderStudyQuestion(){
+  const question=studyQuestions[studyQuestionIndex];
+  const total=studyQuestions.length;
+  const percent=((studyQuestionIndex+1)/total)*100;
+  document.getElementById('studyProgressPill').textContent=`Question ${studyQuestionIndex+1} of ${total}`;
+  document.getElementById('studyProgressBar').style.width=`${percent}%`;
+  document.getElementById('studyQuestion').textContent=question.question;
+  const options=document.getElementById('studyOptions');
+  options.replaceChildren();
+  const keys=['A','B','C','D'];
+  question.options.forEach((option,index)=>{
+    const button=document.createElement('button');
+    button.type='button';
+    button.className='study-option';
+    const selected=studyAnswers[studyQuestionIndex];
+    if(selected!==null&&index===question.correct)button.classList.add('is-correct');
+    if(selected===index&&selected!==question.correct)button.classList.add('is-wrong');
+    button.disabled=studyAnswers[studyQuestionIndex]!==null;
+    button.setAttribute('aria-pressed',selected===index?'true':'false');
+    const key=document.createElement('span');
+    key.className='study-option-key';
+    key.textContent=keys[index];
+    const text=document.createElement('span');
+    text.className='study-option-text';
+    text.textContent=option;
+    button.append(key,text);
+    button.addEventListener('click',()=>selectStudyAnswer(index));
+    options.appendChild(button);
+  });
+  const selected=studyAnswers[studyQuestionIndex];
+  const feedback=document.getElementById('studyFeedback');
+  feedback.replaceChildren();
+  feedback.className='study-feedback';
+  if(selected!==null){
+    const isCorrect=selected===question.correct;
+    feedback.classList.add(isCorrect?'is-correct':'is-wrong');
+    const message=document.createElement('strong');
+    message.textContent=isCorrect?'Correct!':'Not quite.';
+    const answer=document.createElement('span');
+    answer.textContent=`Correct answer: ${keys[question.correct]}. ${question.options[question.correct]}`;
+    feedback.append(message,answer);
+    if(question.explanation){
+      const explanation=document.createElement('span');
+      explanation.textContent=question.explanation;
+      feedback.appendChild(explanation);
+    }
+  }
+  updateStudyNavigation();
+}
+
+function selectStudyAnswer(answerIndex){
+  if(studyAnswers[studyQuestionIndex]!==null)return;
+  studyAnswers[studyQuestionIndex]=answerIndex;
+  renderStudyQuestion();
+}
+
+function updateStudyNavigation(){
+  const previous=document.getElementById('studyPrev');
+  const next=document.getElementById('studyNext');
+  previous.disabled=studyMode==='flashcard'?studyCardIndex===0:studyQuestionIndex===0;
+  if(studyMode==='flashcard'){
+    next.textContent=studyCardIndex===studyCardCount-1?'Finish':'Next';
+    next.insertAdjacentHTML('beforeend',studyCardIndex===studyCardCount-1?' <i class="fas fa-check" aria-hidden="true"></i>':' <i class="fas fa-arrow-right" aria-hidden="true"></i>');
+    next.disabled=false;
+  }else{
+    const last=studyQuestionIndex===studyQuestions.length-1;
+    next.textContent=last?'Finish':'Next';
+    next.insertAdjacentHTML('beforeend',last?' <i class="fas fa-check" aria-hidden="true"></i>':' <i class="fas fa-arrow-right" aria-hidden="true"></i>');
+    next.disabled=studyAnswers[studyQuestionIndex]===null;
+  }
+}
+
+function studyPrevious(){
+  if(studyMode==='flashcard'){
+    if(studyCardIndex>0)showStudyCard(studyCardIndex-1);
+    return;
+  }
+  if(studyQuestionIndex>0){
+    studyQuestionIndex--;
+    renderStudyQuestion();
+  }
+}
+
+function studyNext(){
+  if(studyMode==='flashcard'){
+    if(studyCardIndex===studyCardCount-1){closeStudyModal();return}
+    showStudyCard(studyCardIndex+1);
+    return;
+  }
+  if(studyAnswers[studyQuestionIndex]===null)return;
+  if(studyQuestionIndex===studyQuestions.length-1){submitStudyQuiz();return}
+  studyQuestionIndex++;
+  renderStudyQuestion();
+}
+
+function showStudyCard(index){
+  const cards=document.querySelectorAll('.study-fc-scene');
+  if(index<0||index>=cards.length)return;
+  cards.forEach((card,cardIndex)=>{
+    card.hidden=cardIndex!==index;
+    card.setAttribute('aria-pressed','false');
+    card.tabIndex=cardIndex===index?0:-1;
+    setStudyCardSide(card,false,false);
+  });
+  studyCardIndex=index;
+  document.getElementById('studyProgressPill').textContent=`Card ${index+1} of ${studyCardCount}`;
+  document.getElementById('studyProgressBar').style.width=`${((index+1)/studyCardCount)*100}%`;
+  updateStudyNavigation();
+}
+
+function flipStudyCard(card=document.getElementById(`studyFc${studyCardIndex}`)){
+  if(!card)return;
+  const flipped=!card.classList.contains('flipped');
+  setStudyCardSide(card,flipped,true);
+}
+
+function setStudyCardSide(card,flipped,animate){
+  const front=card.querySelector('.fc-front');
+  const back=card.querySelector('.fc-back');
+  if(!front||!back)return;
+  front.hidden=flipped;
+  back.hidden=!flipped;
+  front.style.display=flipped?'none':'flex';
+  back.style.display=flipped?'flex':'none';
+  front.setAttribute('aria-hidden',flipped?'true':'false');
+  back.setAttribute('aria-hidden',flipped?'false':'true');
+  card.classList.toggle('flipped',flipped);
+  card.classList.remove('is-flipping');
+  card.style.setProperty('--study-flip-start',flipped?'90deg':'-90deg');
+  if(animate){
+    void card.offsetWidth;
+    card.classList.add('is-flipping');
+    card.addEventListener('animationend',()=>card.classList.remove('is-flipping'),{once:true});
+  }
+  card.setAttribute('aria-pressed',flipped?'true':'false');
+  const question=card.querySelector('.fc-front .fc-text')?.textContent||'';
+  const answer=card.querySelector('.fc-back .fc-text')?.textContent||'';
+  card.setAttribute('aria-label',flipped?`Flashcard answer: ${answer}. Flip to show the question`:`Flashcard question: ${question}. Flip to reveal the answer`);
+}
+window.flipStudyCard=flipStudyCard;
+
+async function submitStudyQuiz(){
+  const requestId=studyRequestId;
+  const score=studyAnswers.reduce((sum,answer,index)=>sum+(answer===studyQuestions[index].correct?1:0),0);
+  const total=studyQuestions.length;
+  const percent=Math.round((score/total)*100);
+  document.getElementById('studyQuizQuestion').hidden=true;
+  document.getElementById('studyQuizResults').hidden=false;
+  document.getElementById('studyModalFooter').hidden=true;
+  document.getElementById('studyProgressPill').textContent='Results';
+  document.getElementById('studyProgressBar').style.width='100%';
+  document.getElementById('studyResultsHeading').textContent='Quiz complete';
+  document.getElementById('studyScore').textContent=`${score} / ${total}`;
+  document.getElementById('studyPercentage').textContent=`${percent}%`;
+  document.getElementById('studyResultMessage').textContent='Your score determines when your next retake becomes available.';
+  document.getElementById('studySaveError').hidden=true;
+  document.getElementById('studyCooldown').hidden=true;
+  document.getElementById('studyRetake').hidden=true;
+  document.getElementById('studyLastAttempt').textContent='Saving your attempt…';
+  document.getElementById('studyHistory').replaceChildren();
+  try{
+    const response=await fetch('save_quiz.php',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({lesson_id:studyLessonId,answers:studyAnswers,csrf_token:studyCsrfToken})
+    });
+    const data=await response.json();
+    if(requestId!==studyRequestId||studyMode!=='quiz'||!document.getElementById('studyModal').classList.contains('open'))return;
+    if(!response.ok||!data.success){
+      if(response.status===429&&data.next_retake_at){
+        await fetchQuizStatus();
+        return;
+      }
+      throw new Error(data.error||'Could not save quiz result.');
+    }
+    studyStatus=data;
+    renderStudyResults(score,total,data);
+  }catch(error){
+    if(requestId!==studyRequestId||studyMode!=='quiz'||!document.getElementById('studyModal').classList.contains('open'))return;
+    document.getElementById('studyLastAttempt').textContent='';
+    document.getElementById('studySaveError').textContent=error.message||'Could not save quiz result. Please try again.';
+    document.getElementById('studySaveError').hidden=false;
+  }
+}
+
+function renderStudyResults(score,total,status){
+  const percent=Math.round((score/total)*100);
+  const latest=status.latest;
+  document.getElementById('studyQuizLoading').hidden=true;
+  document.getElementById('studyQuizQuestion').hidden=true;
+  document.getElementById('studyQuizResults').hidden=false;
+  document.getElementById('studyModalFooter').hidden=true;
+  document.getElementById('studyResultsHeading').textContent='Quiz results';
+  document.getElementById('studyScore').textContent=`${score} / ${total}`;
+  document.getElementById('studyPercentage').textContent=`${percent}%`;
+  document.getElementById('studyResultMessage').textContent='Your score determines when your next retake becomes available.';
+  document.getElementById('studySaveError').hidden=true;
+  const cooldown=document.getElementById('studyCooldown');
+  const retake=document.getElementById('studyRetake');
+  retake.hidden=true;
+  if(latest){
+    document.getElementById('studyLastAttempt').textContent=`Last attempt: ${latest.completed_label}, Score: ${latest.score}/${latest.total}`;
+    document.getElementById('studyCooldownRule').textContent=latest.rule_message;
+    document.getElementById('studyCooldownDate').textContent=`Retake available on ${latest.next_retake_label}`;
+    if(latest.remaining_seconds>0){
+      cooldown.hidden=false;
+      retake.textContent=`Retake available on ${latest.next_retake_label}`;
+      retake.disabled=true;
+      retake.hidden=false;
+      beginStudyCountdown(latest.remaining_seconds);
+    }else{
+      if(studyCountdownTimer){clearInterval(studyCountdownTimer);studyCountdownTimer=null}
+      cooldown.hidden=true;
+      retake.textContent='Retake Quiz';
+      retake.disabled=false;
+      retake.hidden=false;
+    }
+  }else{
+    document.getElementById('studyLastAttempt').textContent='';
+    cooldown.hidden=true;
+    retake.textContent='Start Quiz';
+    retake.disabled=false;
+    retake.hidden=false;
+  }
+  renderStudyHistory(status.attempts||[]);
+  document.getElementById('studyProgressPill').textContent='Results';
+  document.getElementById('studyProgressBar').style.width='100%';
+}
+
+function renderStudyHistory(attempts){
+  const history=document.getElementById('studyHistory');
+  history.replaceChildren();
+  if(!attempts.length)return;
+  const heading=document.createElement('h4');
+  heading.textContent='Recent attempts';
+  history.appendChild(heading);
+  attempts.forEach(attempt=>{
+    const row=document.createElement('div');
+    row.className='study-history-row';
+    const date=document.createElement('span');
+    date.textContent=attempt.completed_label;
+    const score=document.createElement('strong');
+    score.textContent=`${attempt.score}/${attempt.total} (${Math.round(attempt.percentage)}%)`;
+    const rule=document.createElement('small');
+    rule.textContent=`${attempt.days}-day cooldown`;
+    row.append(date,score,rule);
+    history.appendChild(row);
+  });
+}
+
+function beginStudyCountdown(seconds){
+  if(studyCountdownTimer)clearInterval(studyCountdownTimer);
+  studyCountdownSeconds=Math.max(0,seconds);
+  const output=document.getElementById('studyCountdown');
+  const tick=()=>{
+    const days=Math.floor(studyCountdownSeconds/86400);
+    const hours=Math.floor((studyCountdownSeconds%86400)/3600);
+    const minutes=Math.floor((studyCountdownSeconds%3600)/60);
+    output.textContent=studyCountdownSeconds>0?`Available in ${days}d ${hours}h ${minutes}m`:'Checking availability…';
+    if(studyCountdownSeconds===0){
+      clearInterval(studyCountdownTimer);
+      studyCountdownTimer=null;
+      fetchQuizStatus();
+    }
+  };
+  tick();
+  studyCountdownTimer=setInterval(()=>{
+    studyCountdownSeconds=Math.max(0,studyCountdownSeconds-60);
+    tick();
+  },60000);
+}
+
+function handleStudyKeys(event){
+  const modal=document.getElementById('studyModal');
+  if(!modal.classList.contains('open'))return;
+  if(event.key==='Escape'){event.preventDefault();closeStudyModal();return}
+  if(event.key==='Tab'){
+    const focusable=[...modal.querySelectorAll('button:not([disabled]):not([hidden]),[tabindex="0"]:not([hidden])')].filter(element=>element.offsetParent!==null);
+    if(!focusable.length){event.preventDefault();modal.focus();return}
+    const first=focusable[0],last=focusable[focusable.length-1];
+    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}
+    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}
+    return;
+  }
+  if(studyMode==='flashcard'){
+    if(event.key==='ArrowRight'){event.preventDefault();studyNext()}
+    else if(event.key==='ArrowLeft'){event.preventDefault();studyPrevious()}
+    else if((event.key===' '||event.key==='Enter')&&event.target.closest('.study-fc-scene')){event.preventDefault();flipStudyCard()}
+    return;
+  }
+  if(event.target.matches('input,textarea,select'))return;
+  if(document.getElementById('studyQuizQuestion').hidden)return;
+  if(/^[1-4]$/.test(event.key)||/^[a-d]$/i.test(event.key)){
+    event.preventDefault();
+    const index=/^[1-4]$/.test(event.key)?Number(event.key)-1:event.key.toUpperCase().charCodeAt(0)-65;
+    const option=document.getElementById('studyOptions').children[index];
+    if(option&&!option.disabled)option.click();
+  }else if(event.key==='Enter'&&!event.target.matches('button')){
+    event.preventDefault();
+    if(!document.getElementById('studyNext').disabled)studyNext();
+  }
 }
 
 // ---- INIT ----
