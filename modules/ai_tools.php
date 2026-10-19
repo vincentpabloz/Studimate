@@ -447,65 +447,11 @@ include '../includes/sidebar.php';
           <div class="text-sm text-muted">Not generated yet</div>
           <?php endif;?>
         </div>
+        <?php if($isSaved&&count($selectedLessons)===1):?>
+        <a class="btn btn-outline btn-pill btn-sm" style="width:auto" href="study.php?lesson_id=<?=(int)$lesson_id?>&tab=<?=$type?>">Open in Study</a>
+        <?php endif;?>
       </div>
-      <div class="quiz-q" id="qText"></div>
-      <div class="quiz-options" id="qOpts"></div>
-      <div style="display:flex;justify-content:flex-end;margin-top:18px">
-        <button id="qNext" onclick="nextQ()"
-          class="btn btn-primary btn-pill btn-sm" style="display:none;width:auto;padding:9px 22px">
-          Next <i class="fas fa-arrow-right"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-  <div id="quizResult" style="display:none">
-    <div class="card" style="padding:32px;text-align:center">
-      <div style="font-size:1rem;font-weight:700;margin-bottom:20px">Quiz Complete! 🎉</div>
-      <div class="score-circle"><span class="score-num"></span><span class="score-denom"></span></div>
-      <div style="font-size:1.6rem;font-weight:800;color:var(--primary);margin-bottom:6px" class="score-pct"></div>
-      <p class="score-msg text-sm text-muted mb-6"></p>
-      <div style="display:flex;gap:10px;justify-content:center">
-        <button onclick="location.reload()" class="btn btn-outline btn-pill btn-sm" style="width:auto">
-          <i class="fas fa-redo"></i> Retake
-        </button>
-        <a href="../modules/schedule.php" class="btn btn-primary btn-pill btn-sm" style="width:auto;padding:9px 20px">
-          <i class="fas fa-calendar"></i> View Schedule
-        </a>
-      </div>
-    </div>
-  </div>
-  <?php endif;?>
-  <?php elseif($type==='flashcard'):?>
-  <?php if(empty($flashcards)):?>
-  <div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i>Flashcards could not be parsed. Try regenerating.</div>
-  <?php else:?>
-  <div class="card" style="padding:20px">
-    <div style="text-align:center;font-size:0.78rem;font-weight:600;color:var(--text-light);margin-bottom:6px">
-      Card <span id="fcNum">1</span> of <?=count($flashcards)?>
-    </div>
-    <?php foreach($flashcards as $fi=>$fc):?>
-    <div class="fc-scene" id="fc<?=$fi?>" onclick="this.classList.toggle('flipped')"
-         style="<?=$fi>0?'display:none':''?>">
-      <div class="fc-inner">
-        <div class="fc-front">
-          <div class="fc-label">Question</div>
-          <div class="fc-text"><?=htmlspecialchars($fc['front'])?></div>
-        </div>
-        <div class="fc-back">
-          <div class="fc-label">Answer</div>
-          <div class="fc-text"><?=htmlspecialchars($fc['back'])?></div>
-        </div>
-      </div>
-    </div>
-    <?php endforeach;?>
-    <p class="fc-hint">Click card to flip &bull; Use arrow keys to navigate</p>
-    <div style="display:flex;justify-content:center;gap:10px;margin-top:14px">
-      <button class="btn btn-outline btn-pill btn-sm" style="width:auto" onclick="fcNav(-1)">
-        <i class="fas fa-arrow-left"></i> Prev
-      </button>
-      <button class="btn btn-primary btn-pill btn-sm" style="width:auto;padding:9px 20px" onclick="fcNav(1)">
-        Next <i class="fas fa-arrow-right"></i>
-      </button>
+      <?php endforeach;?>
     </div>
   </div>
   <?php endif;?>
