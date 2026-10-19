@@ -151,21 +151,15 @@ include '../includes/sidebar.php';
           <label>Confirm New Password</label>
           <input type="password" name="confirm_new" class="form-control form-control-flat" placeholder="Re-enter new password">
         </div>
-        <button type="submit" class="btn btn-outline btn-pill btn-square" style="border-radius:var(--radius-sm)">Update Password</button>
+        <button type="submit" class="btn btn-outline btn-pill btn-square" style="width:160px;border-radius:var(--radius-sm)">Update Password</button>
       </form>
     </div>
   </div>
 
-  <!-- ACTIONS -->
-  <div class="grid-2">
-    <button class="btn btn-outline btn-square" style="border-radius:var(--radius-sm);justify-content:center">
-      <i class="fas fa-cog"></i> Settings
-    </button>
-    <a href="../logout.php" class="btn btn-square"
-       style="background:#FEE2E2;color:#B91C1C;border:none;border-radius:var(--radius-sm);justify-content:center">
-      <i class="fas fa-sign-out-alt"></i> Log Out
-    </a>
-  </div>
+  <a href="../logout.php" class="btn btn-square"
+     style="width:100%;background:#FEE2E2;color:#B91C1C;border:none;border-radius:var(--radius-sm);justify-content:center">
+    <i class="fas fa-sign-out-alt"></i> Log Out
+  </a>
 
 </div>
 
