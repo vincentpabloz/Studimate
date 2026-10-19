@@ -138,7 +138,11 @@ CREATE TABLE IF NOT EXISTS quiz_results (
     lesson_id INT NOT NULL,
     score INT NOT NULL,
     total INT NOT NULL,
+    percentage DECIMAL(5,2) NOT NULL,
+    completed_at DATETIME NOT NULL,
+    next_retake_at DATETIME NOT NULL,
     taken_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY quiz_retake_lookup (user_id, lesson_id, completed_at),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (lesson_id) REFERENCES lessons(id) ON DELETE CASCADE
 );

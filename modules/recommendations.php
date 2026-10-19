@@ -4,19 +4,20 @@ if(!isset($_SESSION['user_id'])){header("Location: ../index.php");exit;}
 require '../config/db.php';
 $uid=$_SESSION['user_id'];$base='../';
 
-// Auto recommendations from low quiz scores
+// Recommend lessons whose latest quiz score is below target; compare against the first attempt.
 $weak=$pdo->prepare("
   SELECT l.id as lesson_id,l.title,s.subject_name,s.color,
-    ROUND(AVG((qr.score/qr.total)*100)) as avg_pct,
-    COUNT(qr.id) as quiz_count
-  FROM quiz_results qr
-  JOIN lessons l ON qr.lesson_id=l.id
+    (SELECT ROUND(score*100/total) FROM quiz_results WHERE lesson_id=l.id AND user_id=? AND total>0 ORDER BY taken_at ASC,id ASC LIMIT 1) as first_pct,
+    (SELECT ROUND(score*100/total) FROM quiz_results WHERE lesson_id=l.id AND user_id=? AND total>0 ORDER BY taken_at DESC,id DESC LIMIT 1) as latest_pct,
+    (SELECT COUNT(*) FROM quiz_results WHERE lesson_id=l.id AND user_id=? AND total>0) as quiz_count
+  FROM lessons l
   JOIN subjects s ON l.subject_id=s.id
-  WHERE qr.user_id=? AND qr.total>0
-  GROUP BY l.id HAVING avg_pct<75
-  ORDER BY avg_pct ASC LIMIT 8
+  WHERE s.user_id=?
+    AND EXISTS (SELECT 1 FROM quiz_results WHERE lesson_id=l.id AND user_id=? AND total>0)
+    AND (SELECT score*100/total FROM quiz_results WHERE lesson_id=l.id AND user_id=? AND total>0 ORDER BY taken_at DESC,id DESC LIMIT 1)<75
+  ORDER BY latest_pct ASC LIMIT 8
 ");
-$weak->execute([$uid]);$weakList=$weak->fetchAll();
+$weak->execute([$uid,$uid,$uid,$uid,$uid,$uid]);$weakList=$weak->fetchAll();
 
 // Overdue reviews
 $overdue=$pdo->prepare("
@@ -58,7 +59,7 @@ include '../includes/sidebar.php';
           <div class="lesson-title"><?=htmlspecialchars($r['title'])?></div>
           <div class="lesson-meta"><?=htmlspecialchars($r['subject_name'])?> &bull; <?=$r['days_overdue']?> day<?=$r['days_overdue']>1?'s':''?> overdue</div>
         </div>
-        <a href="study.php?lesson_id=<?=$r['lesson_id']?>&tab=quiz" class="btn btn-danger btn-pill btn-sm" style="width:auto">
+        <a href="study.php?lesson_id=<?=$r['lesson_id']?>&amp;tab=quiz" class="btn btn-danger btn-pill btn-sm" style="width:auto">
           Review Now
         </a>
       </div>
@@ -84,7 +85,9 @@ include '../includes/sidebar.php';
       <div class="empty-state"><i class="fas fa-check-circle"></i><h4>All lessons above target!</h4></div>
       <?php else:?>
       <?php foreach($weakList as $r):
-        $pct=(int)$r['avg_pct'];
+        $pct=(int)$r['latest_pct'];
+        $firstPct=(int)$r['first_pct'];
+        $change=$pct-$firstPct;
         $c=$pct<40?'var(--danger)':($pct<60?'var(--warning)':'var(--primary)');
         $pri=$pct<40?'Urgent':($pct<60?'High':'Medium');
         $bc=$pct<40?'badge-danger':($pct<60?'badge-warning':'badge-primary');
@@ -97,14 +100,18 @@ include '../includes/sidebar.php';
           <div class="lesson-title"><?=htmlspecialchars($r['title'])?></div>
           <div class="lesson-meta">
             <?=htmlspecialchars($r['subject_name'])?> &bull;
-            Avg: <strong style="color:<?=$c?>"><?=$pct?>%</strong> &bull;
-            <?=$r['quiz_count']?> quiz<?=$r['quiz_count']>1?'zes':''?>
+            First: <?=$firstPct?>% &rarr; Latest: <strong style="color:<?=$c?>"><?=$pct?>%</strong>
+            <?php if((int)$r['quiz_count']>1):?>
+              &bull; <strong style="color:<?=$change>0?'var(--success)':($change<0?'var(--danger)':'var(--text-mid)')?>"><?=$change>0?'+':''?><?=$change?> pts</strong>
+            <?php else:?>
+              &bull; First attempt
+            <?php endif;?>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:7px">
           <span class="badge <?=$bc?>"><?=$pri?></span>
-          <a href="study.php?lesson_id=<?=$r['lesson_id']?>&tab=explanation" class="btn btn-ghost btn-sm">Study</a>
-          <a href="study.php?lesson_id=<?=$r['lesson_id']?>&tab=quiz" class="btn btn-primary btn-pill btn-sm" style="width:auto">Quiz</a>
+          <a href="study.php?lesson_id=<?=$r['lesson_id']?>&amp;tab=explanation" class="btn btn-ghost btn-sm">Study</a>
+          <a href="study.php?lesson_id=<?=$r['lesson_id']?>&amp;tab=quiz" class="btn btn-primary btn-pill btn-sm" style="width:auto">Quiz</a>
         </div>
       </div>
       <?php endforeach;?>
