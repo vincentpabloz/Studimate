@@ -12,7 +12,7 @@ Install parser dependencies with Composer after enabling PHP ZIP:
 composer install
 ```
 
-The project locks `smalot/pdfparser` for PDF text extraction. DOCX and PPTX text is read from bounded OOXML parts using PHP ZIP and XML support. Legacy `.ppt` requires LibreOffice; set `STUDIMATE_LIBREOFFICE` to its executable path. Original files are stored outside the web root by default; set `STUDIMATE_PRIVATE_STORAGE` to a persistent private writable directory in deployment.
+The project locks `smalot/pdfparser` for PDF text extraction. DOCX and PPTX text is read from bounded OOXML parts using PHP ZIP and XML support. Legacy `.ppt` requires LibreOffice; set `STUDIMATE_LIBREOFFICE` to its executable path. Original files are stored in the app's `private-document-storage` directory, which denies direct web access. Set `STUDIMATE_PRIVATE_STORAGE` to a persistent private writable directory outside the web root when one is available in deployment.
 
 AI generation happens only after an explicit output request. Set `HUGGINGFACE_API_TOKEN` or `HF_TOKEN` in the server environment to enable it. Uploading or saving a lesson does not generate outputs.
 

@@ -16,7 +16,7 @@ $query = $pdo->prepare('
 ');
 $query->execute([(int)($_GET['id'] ?? 0), (int)$_SESSION['user_id']]);
 $document = $query->fetch();
-$storageRoot = getenv('STUDIMATE_PRIVATE_STORAGE') ?: dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'studimate-private-storage';
+$storageRoot = getenv('STUDIMATE_PRIVATE_STORAGE') ?: dirname(__DIR__) . DIRECTORY_SEPARATOR . 'private-document-storage';
 $resolvedRoot = realpath($storageRoot);
 $resolvedFile = $document ? realpath($document['storage_path']) : false;
 $rootPrefix = $resolvedRoot === false ? '' : rtrim($resolvedRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;

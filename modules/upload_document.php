@@ -10,7 +10,7 @@ require '../includes/document_extractor.php';
 
 $uid = (int)$_SESSION['user_id'];
 $subjectId = (int)($_POST['subject_id'] ?? 0);
-$storageRoot = getenv('STUDIMATE_PRIVATE_STORAGE') ?: dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'studimate-private-storage';
+$storageRoot = getenv('STUDIMATE_PRIVATE_STORAGE') ?: dirname(__DIR__) . DIRECTORY_SEPARATOR . 'private-document-storage';
 $storedPath = null;
 
 function uploadError(string $message, int $subjectId)
@@ -97,7 +97,12 @@ if (in_array($extension, ['docx', 'pptx'], true)) {
 }
 
 if (!is_dir($storageRoot) && !mkdir($storageRoot, 0700, true) && !is_dir($storageRoot)) {
-    uploadError('Private document storage is unavailable.', $subjectId);
+    error_log('Unable to create private document storage directory: ' . $storageRoot);
+    uploadError('Document storage is unavailable. Configure STUDIMATE_PRIVATE_STORAGE as a writable private directory or allow PHP to create private-document-storage.', $subjectId);
+}
+if (!is_writable($storageRoot)) {
+    error_log('Private document storage directory is not writable: ' . $storageRoot);
+    uploadError('Document storage is not writable. Configure STUDIMATE_PRIVATE_STORAGE as a writable private directory or grant PHP write access to private-document-storage.', $subjectId);
 }
 $randomName = bin2hex(random_bytes(24)) . '.' . $extension;
 $storedPath = $storageRoot . DIRECTORY_SEPARATOR . $randomName;
@@ -212,10 +217,10 @@ try {
     $pdo->commit();
 
     $_SESSION['upload_success'] = $existingLesson
-        ? 'Document saved separately and linked to existing lesson “' . $existingLesson['title'] . '”. No AI was called.'
+        ? 'Document saved separately and linked to existing lesson “' . $existingLesson['title'] . '”.'
         : ($typedText !== ''
-            ? 'Document text and your lesson notes were combined and saved as one lesson. No AI was called.'
-            : 'Document extracted and saved as a lesson. Choose an output when you are ready; no AI was called.');
+            ? 'Document text and your lesson notes were combined and saved as one lesson.'
+            : 'Document extracted and saved as a lesson. Choose an output when you are ready');
     header('Location: lessons.php?subject_id=' . $subjectId);
     exit;
 } catch (Throwable $error) {
