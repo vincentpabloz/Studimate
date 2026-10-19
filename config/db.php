@@ -33,7 +33,7 @@ if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_ACTIVE && !empty($_SE
         }
         if ($activeRow !== false) {
             $_SESSION['user_role'] = $activeRow['role'];
-            $adminOnlyPages = ['admin.php', 'admin_health.php', 'admin_users.php', 'admin_profile.php'];
+            $adminOnlyPages = ['admin.php', 'admin_health.php', 'admin_users.php', 'admin_profile.php', 'admin_activity.php', 'admin_trends.php'];
             $publicPages = ['logout.php', 'index.php', 'register.php', 'forgot_password.php', 'reset_password.php', 'unsubscribe.php'];
             $thisPage = basename((string)($_SERVER['PHP_SELF'] ?? ''));
             if ($activeRow['role'] === 'admin' && !in_array($thisPage, array_merge($adminOnlyPages, $publicPages), true)) {

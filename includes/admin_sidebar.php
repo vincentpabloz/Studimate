@@ -5,8 +5,10 @@ $_adminInitial = strtoupper(substr($_SESSION['user_name'] ?? 'A', 0, 1));
 $_adminPage = basename($_SERVER['PHP_SELF']);
 $_adminItems = [
     'admin.php'            => ['Overview',           'fa-tachometer-alt'],
+    'admin_trends.php'     => ['Usage trends',       'fa-chart-line'],
     'admin_health.php'     => ['System health',      'fa-heartbeat'],
     'admin_users.php'      => ['User accounts',      'fa-users'],
+    'admin_activity.php'   => ['Activity log',       'fa-history'],
     'admin_profile.php'    => ['Profile',            'fa-user'],
 ];
 ?>

@@ -41,10 +41,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   }
 }
 
-$activity=adminOwnActivity($pdo,$adminId);
-$counts=adminUserCounts($pdo);
 $fmt=fn($t)=>$t?date('M j, Y g:i A',strtotime($t)):'Never';
-$labels=['deactivate'=>'Deactivated','activate'=>'Reactivated','promote'=>'Made admin','demote'=>'Removed admin','reset'=>'Reset links sent'];
 $initial=strtoupper(substr($u['name'],0,1));
 
 $pageTitle='Profile – StudiMate Admin';
@@ -64,30 +61,6 @@ include '../includes/admin_sidebar.php';
       <div class="profile-name"><?=htmlspecialchars($u['name'])?></div>
       <div class="profile-sub"><?=htmlspecialchars($u['email'])?> · Administrator</div>
       <div class="profile-active">Active</div>
-    </div>
-  </div>
-
-  <!-- YOUR ADMIN ACTIVITY -->
-  <div class="card mb-4">
-    <div class="card-header"><h3>Your admin activity</h3></div>
-    <div class="card-body">
-      <div class="grid-3 mb-4" style="grid-template-columns:repeat(4,1fr)">
-        <div class="analytics-stat"><div class="analytics-stat-val"><?=$activity['total']?></div><div class="analytics-stat-label">Actions taken</div></div>
-        <div class="analytics-stat"><div class="analytics-stat-val"><?=$activity['last30']?></div><div class="analytics-stat-label">Last 30 days</div></div>
-        <div class="analytics-stat"><div class="analytics-stat-val"><?=$counts['total']?></div><div class="analytics-stat-label">Accounts managed</div></div>
-        <div class="analytics-stat"><div class="analytics-stat-val"><?=$counts['admins']?></div><div class="analytics-stat-label">Administrators</div></div>
-      </div>
-      <?php foreach($labels as $k=>$label):?>
-        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:0.85rem"><span><?=$label?></span><strong><?=$activity['by_type'][$k]?></strong></div>
-      <?php endforeach;?>
-      <h4 style="margin:18px 0 8px;font-size:0.88rem">Recent actions</h4>
-      <?php if(!$activity['recent']):?>
-        <p class="text-sm text-muted" style="margin:0">No actions yet. Actions you take on the User accounts page appear here.</p>
-      <?php else:?>
-        <?php foreach($activity['recent'] as $a):?>
-        <div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:0.82rem"><?=htmlspecialchars(adminDescribeAction($pdo,(string)$a['message']))?> <span class="text-muted"> · <?=htmlspecialchars($fmt($a['created_at']))?></span></div>
-        <?php endforeach;?>
-      <?php endif;?>
     </div>
   </div>
 
