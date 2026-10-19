@@ -53,9 +53,9 @@ if(isset($pdo,$_SESSION['user_id'])){
       </a>
     </div>
     <div class="nav-item">
-      <a href="<?=$base??''?>modules/progress.php" class="<?=isActive('progress.php')?>">
+      <a href="<?=$base??''?>modules/progress.php" class="<?=isActive(['progress.php','recommendations.php'])?>">
         <i class="fas fa-chart-bar"></i> Analytics
-        <?php if(isActive('progress.php')==='active'):?><span class="nav-dot"></span><?php endif;?>
+        <?php if(isActive(['progress.php','recommendations.php'])==='active'):?><span class="nav-dot"></span><?php endif;?>
       </a>
     </div>
     <div class="nav-item">

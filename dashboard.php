@@ -28,15 +28,16 @@ $subjects=$pdo->prepare("
 ");
 $subjects->execute([$uid,$uid]);$subjectList=$subjects->fetchAll();
 
-// Upcoming reviews
+// Upcoming reviews, grouped by subject (e.g. "ETHICS - 2 topics"); the earliest due date decides the badge.
 $upcoming=$pdo->prepare("
-  SELECT rs.*,l.title,s.subject_name,s.color
+  SELECT s.id AS subject_id,s.subject_name,s.color,COUNT(*) AS topic_count,MIN(rs.next_review_date) AS next_review_date
   FROM review_schedule rs
   JOIN lessons l ON rs.lesson_id=l.id
   JOIN subjects s ON l.subject_id=s.id
-  WHERE rs.user_id=? ORDER BY rs.next_review_date ASC LIMIT 5
+  WHERE rs.user_id=? GROUP BY s.id,s.subject_name,s.color ORDER BY next_review_date ASC,s.subject_name ASC LIMIT 5
 ");
 $upcoming->execute([$uid]);$reviews=$upcoming->fetchAll();
+$upcomingTopics=array_sum(array_map('intval',array_column($reviews,'topic_count')));
 
 // Reminders (respect the user's notification settings)
 $prefQ=$pdo->prepare("SELECT notif_reviews,notif_quizzes FROM users WHERE id=?");
@@ -84,7 +85,7 @@ include 'includes/sidebar.php';
         <?php foreach($dueList as $d):
           $overdue=strtotime($d['next_review_date'])<strtotime('today');?>
         <li>
-          <a href="modules/study.php?lesson_id=<?=(int)$d['lesson_id']?>" style="color:inherit;text-decoration:underline"><?=htmlspecialchars($d['title'])?></a>
+          <a href="modules/study.php?lesson_id=<?=(int)$d['lesson_id']?>&tab=explanation" style="color:inherit;text-decoration:underline"><?=htmlspecialchars($d['title'])?></a>
           &middot; <?=htmlspecialchars($d['subject_name'])?> &middot; <?=$overdue?'Overdue':'Due today'?>
         </li>
         <?php endforeach;?>
@@ -108,7 +109,7 @@ include 'includes/sidebar.php';
     <div class="hero-greeting"><?=$greet?>, <?=htmlspecialchars($firstName)?> 👋</div>
     <div class="hero-sub">
       <?php if($due>0):?><?=$due?> review<?=$due>1?'s':''?> due today &middot; <?php endif;?>
-      <?=count($reviews)?> upcoming scheduled
+      <?=$upcomingTopics?> upcoming scheduled
     </div>
     <a href="modules/schedule.php" class="hero-btn">View schedule <i class="fas fa-arrow-right"></i></a>
   </div>
@@ -215,14 +216,14 @@ include 'includes/sidebar.php';
     elseif($diff===1){$cls='rb-tomorrow';$lbl='Tomorrow';}
     else{$cls='rb-upcoming';$lbl=$date->format('M j');}
   ?>
-  <div class="review-item">
+  <a class="review-item" href="modules/lessons.php?subject_id=<?=(int)$r['subject_id']?>" style="text-decoration:none;color:inherit">
     <div class="review-item-icon"><i class="fas fa-calendar"></i></div>
     <div class="review-item-info">
-      <div class="review-item-title"><?=htmlspecialchars($r['title'])?></div>
-      <div class="review-item-sub"><?=htmlspecialchars($r['subject_name'])?></div>
+      <div class="review-item-title"><?=htmlspecialchars($r['subject_name'])?></div>
+      <div class="review-item-sub"><?=(int)$r['topic_count']?> topic<?=(int)$r['topic_count']!==1?'s':''?> to review</div>
     </div>
     <span class="review-badge <?=$cls?>"><?=$lbl?></span>
-  </div>
+  </a>
   <?php endforeach;?>
   <?php endif;?>
 

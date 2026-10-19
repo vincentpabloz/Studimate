@@ -10,6 +10,7 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/../config/db.php';
 require __DIR__ . '/../config/env.php';
 require __DIR__ . '/../includes/mail_helpers.php';
+require __DIR__ . '/../includes/admin_helpers.php';
 
 date_default_timezone_set('Asia/Manila');
 $dryRun = in_array('--dry-run', $argv ?? [], true);
@@ -77,7 +78,7 @@ foreach ($byUser as $userId => $items) {
     $htmlItems = '';
     $textItems = '';
     foreach ($shown as $item) {
-        $link = $appUrl . '/modules/ai_tools.php?lesson_id=' . (int)$item['lesson_id'] . '&tab=quiz';
+        $link = $appUrl . '/modules/study.php?lesson_id=' . (int)$item['lesson_id'] . '&tab=quiz';
         $overdue = (strtotime($item['next_review_date']) < strtotime('today')) ? ' (overdue)' : '';
         $htmlItems .= '<li style="margin-bottom:8px"><a href="' . htmlspecialchars($link, ENT_QUOTES) . '">'
             . htmlspecialchars($item['title']) . '</a> &ndash; '
@@ -118,9 +119,11 @@ foreach ($byUser as $userId => $items) {
             $markSent->execute([(int)$item['schedule_id']]);
         }
         $sent++;
+        logActivity($pdo, (int)$userId, 'reminder_email', 'email');
         echo "Sent to {$first['email']} ($count lesson(s))\n";
     } catch (Throwable $e) {
         $failed++;
+        logActivity($pdo, (int)$userId, 'reminder_email', 'email', 'error', $e->getMessage());
         fwrite(STDERR, "Failed for {$first['email']}: " . $e->getMessage() . "\n");
     }
 }

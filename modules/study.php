@@ -64,6 +64,10 @@ include '../includes/sidebar.php';
     <i class="fas fa-chevron-left"></i> <?=htmlspecialchars($lesson['subject_name'])?>
   </a>
 
+  <?php if(isset($_GET['saved'])):?>
+  <div class="alert alert-success mb-4"><i class="fas fa-check-circle"></i>Saved to <?=htmlspecialchars($lesson['subject_name'])?>. You can open it here anytime.</div>
+  <?php endif;?>
+
   <div class="card mb-4">
     <div class="card-body">
       <div style="font-size:0.76rem;color:var(--text-light);margin-bottom:4px"><?=htmlspecialchars($lesson['subject_name'])?></div>

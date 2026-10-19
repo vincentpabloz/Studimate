@@ -117,7 +117,7 @@ include '../includes/sidebar.php';
             <?php else:?>
             <span style="font-size:0.72rem;font-weight:700;color:var(--primary);background:var(--primary-light);padding:3px 8px;border-radius:50px">+<?=$r['interval_days']?>d</span>
             <?php endif;?>
-            <a href="study.php?lesson_id=<?=$r['lesson_id']?>&amp;tab=quiz" class="btn btn-accent-outline btn-sm btn-pill">Review</a>
+            <a href="ai_tools.php?lesson_id=<?=$r['lesson_id']?>&tab=quiz" class="btn btn-accent-outline btn-sm btn-pill">Review</a>
           </div>
         </div>
         <?php endforeach;?>
