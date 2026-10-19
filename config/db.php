@@ -2,8 +2,8 @@
 date_default_timezone_set('Asia/Manila');
 $host = "localhost";
 $dbname = "studimate_db";
-$username = "studimate_user";
-$password = " ";
+$username = "root";
+$password = "";
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
