@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['reset_last'] = time();
         try {
             ensurePasswordResetTable($pdo);
+            ensureTemporaryPasswordColumn($pdo);
             $u = $pdo->prepare("SELECT id, name, email FROM users WHERE email=?");
             $u->execute([$email]);
             $user = $u->fetch();
@@ -33,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $recent->execute([$user['id']]);
                 if ((int)$recent->fetchColumn() === 0) {
                     $token = bin2hex(random_bytes(32));
+                    $temporaryPassword = bin2hex(random_bytes(16));
                     $pdo->prepare("DELETE FROM password_resets WHERE user_id=?")->execute([$user['id']]);
                     $pdo->prepare("INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?,?, NOW() + INTERVAL 30 MINUTE)")
                         ->execute([$user['id'], hash('sha256', $token)]);
@@ -45,18 +47,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $mail = createMailer();
                     $mail->addAddress($user['email'], $user['name']);
                     $mail->isHTML(true);
-                    $mail->Subject = 'Reset your StudiMate password';
+                    $mail->Subject = 'Your temporary StudiMate password';
                     $name = htmlspecialchars($user['name'], ENT_QUOTES);
-                    $mail->Body = "<p>Hi $name,</p><p>We got a request to reset your StudiMate password. This link works for 30 minutes and can be used once:</p>"
+                    $mail->Body = "<p>Hi $name,</p><p>Your temporary StudiMate password is <strong>" . htmlspecialchars($temporaryPassword, ENT_QUOTES) . "</strong>. It expires in 30 minutes. Log in with it and choose a new password before using your account.</p>"
+                      . "<p>If you prefer, use this one-time reset link. It works for 30 minutes:</p>"
                         . "<p><a href=\"" . htmlspecialchars($link, ENT_QUOTES) . "\">Reset my password</a></p>"
                         . "<p>If the button does not work, copy this address into your browser:<br>" . htmlspecialchars($link, ENT_QUOTES) . "</p>"
                         . "<p>If you did not ask for this, you can ignore this email. Your password will not change.</p>";
-                    $mail->AltBody = "Hi {$user['name']},\n\nReset your StudiMate password (valid 30 minutes, one use):\n$link\n\nIf you did not ask for this, ignore this email.";
+                    $mail->AltBody = "Hi {$user['name']},\n\nYour temporary StudiMate password is {$temporaryPassword}. It expires in 30 minutes. Log in with it and choose a new password before using your account.\n\nOr reset your password with this one-time link (valid 30 minutes):\n$link\n\nIf you did not ask for this, ignore this email.";
+                    $pdo->beginTransaction();
+                    $pdo->prepare('UPDATE users SET temporary_password_hash=?, temporary_password_expires_at=NOW() + INTERVAL 30 MINUTE WHERE id=?')
+                      ->execute([hash('sha256', $temporaryPassword), $user['id']]);
                     $mail->send();
+                    $pdo->commit();
                 }
             }
             $sent = true; // same message whether or not the email exists
         } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             error_log('StudiMate password reset mail failed: ' . $e->getMessage());
             $error = 'We could not send the email right now. Please try again later.';
         }
@@ -80,12 +90,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </div>
   <div class="auth-card">
     <div class="auth-card-title">Forgot password?</div>
-    <div class="auth-card-sub">Enter your email and we'll send you a reset link</div>
+    <div class="auth-card-sub">Enter your email and we'll send you a temporary password</div>
     <?php if ($error): ?>
       <div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
     <?php if ($sent): ?>
-      <div class="alert alert-success"><i class="fas fa-check-circle"></i>If that email is registered, a reset link is on its way. Check your inbox and spam folder. The link works for 30 minutes.</div>
+      <div class="alert alert-success"><i class="fas fa-check-circle"></i>If that email is registered, a temporary password is on its way. Check your inbox and spam folder.</div>
     <?php else: ?>
     <form method="POST" novalidate>
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf) ?>">
@@ -93,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label>Email</label>
         <input type="email" name="email" class="form-control" placeholder="alex@university.edu" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" autocomplete="email" required>
       </div>
-      <button type="submit" class="btn btn-primary">Send reset link</button>
+      <button type="submit" class="btn btn-primary">Send temporary password</button>
     </form>
     <?php endif; ?>
     <p class="text-center text-sm mt-4" style="color:var(--text-mid)"><a href="index.php" style="font-weight:700;color:var(--text-dark)">Back to log in</a></p>

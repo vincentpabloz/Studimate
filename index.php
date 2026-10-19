@@ -19,17 +19,29 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $s=$pdo->prepare("SELECT * FROM users WHERE email=?");
     $s->execute([$email]);
     $user=$s->fetch();
-    if($user&&password_verify($pass,$user['password'])&&array_key_exists('is_active',$user)&&!(int)$user['is_active']){
+    $temporaryPasswordMatches=$user
+      &&!empty($user['temporary_password_hash'])
+      &&!empty($user['temporary_password_expires_at'])
+      &&strtotime($user['temporary_password_expires_at'])>time()
+      &&hash_equals($user['temporary_password_hash'],hash('sha256',$pass));
+    $passwordMatches=$user&&(password_verify($pass,$user['password'])||$temporaryPasswordMatches);
+    if($passwordMatches&&$temporaryPasswordMatches&&(!array_key_exists('is_active',$user)||(int)$user['is_active'])){
+      $consume=$pdo->prepare('UPDATE users SET temporary_password_hash=NULL, temporary_password_expires_at=NULL, must_change_password=1 WHERE id=? AND temporary_password_hash=? AND temporary_password_expires_at>NOW() AND must_change_password=0');
+      $consume->execute([(int)$user['id'],hash('sha256',$pass)]);
+      $passwordMatches=$consume->rowCount()===1;
+    }
+    if($passwordMatches&&array_key_exists('is_active',$user)&&!(int)$user['is_active']){
       $error='This account has been deactivated. Please contact the administrator.';
-    }elseif($user&&password_verify($pass,$user['password'])){
+    }elseif($passwordMatches){
       session_regenerate_id(true); // prevent session fixation
       unset($_SESSION['login_fail'],$_SESSION['login_lock_until']);
       $_SESSION['user_id']=$user['id'];
       $_SESSION['user_name']=$user['name'];
       $_SESSION['user_email']=$user['email'];
       $_SESSION['user_role']=$user['role'];
+      $_SESSION['password_change_required']=$temporaryPasswordMatches||(int)($user['must_change_password']??0)===1;
       try{$pdo->prepare('UPDATE users SET last_login_at=NOW() WHERE id=?')->execute([$user['id']]);}catch(PDOException $e){/* column not created yet */}
-      header("Location: ".($user['role']==='admin'?"modules/admin.php":"dashboard.php"));exit;
+      header('Location: '.($_SESSION['password_change_required']?'change_temporary_password.php':($user['role']==='admin'?"modules/admin.php":"dashboard.php")));exit;
     }else{
       $_SESSION['login_fail']=($_SESSION['login_fail']??0)+1;
       if($_SESSION['login_fail']>=5){$_SESSION['login_lock_until']=time()+300;$_SESSION['login_fail']=0;}

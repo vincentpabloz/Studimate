@@ -3,6 +3,7 @@ session_start();
 require 'config/db.php';
 require 'includes/password_reset_helpers.php';
 date_default_timezone_set('Asia/Manila');
+ensureTemporaryPasswordColumn($pdo);
 
 $csrf = $_SESSION['csrf_token'] ?? bin2hex(random_bytes(32));
 $_SESSION['csrf_token'] = $csrf;
@@ -25,7 +26,8 @@ if ($reset && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Passwords do not match.';
     } else {
         $pdo->beginTransaction();
-        $pdo->prepare("UPDATE users SET password=? WHERE id=?")->execute([password_hash($pass, PASSWORD_DEFAULT), $reset['user_id']]);
+        $pdo->prepare("UPDATE users SET password=?, must_change_password=0, temporary_password_hash=NULL, temporary_password_expires_at=NULL WHERE id=?")
+          ->execute([password_hash($pass, PASSWORD_DEFAULT), $reset['user_id']]);
         $pdo->prepare("UPDATE password_resets SET used_at=NOW() WHERE id=?")->execute([$reset['id']]);
         $pdo->commit();
         unset($_SESSION['login_fail'], $_SESSION['login_lock_until']);

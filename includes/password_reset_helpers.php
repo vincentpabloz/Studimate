@@ -13,6 +13,21 @@ function ensurePasswordResetTable(PDO $pdo): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
 
+function ensureTemporaryPasswordColumn(PDO $pdo): void
+{
+    $columns = [
+        'must_change_password' => 'TINYINT(1) NOT NULL DEFAULT 0 AFTER password',
+        'temporary_password_hash' => 'CHAR(64) DEFAULT NULL AFTER must_change_password',
+        'temporary_password_expires_at' => 'DATETIME DEFAULT NULL AFTER temporary_password_hash',
+    ];
+    foreach ($columns as $name => $definition) {
+        $column = $pdo->query("SHOW COLUMNS FROM users LIKE '$name'")->fetch();
+        if (!$column) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN $name $definition");
+        }
+    }
+}
+
 function findValidReset(PDO $pdo, string $token): ?array
 {
     if (!preg_match('/^[a-f0-9]{64}$/', $token)) {
