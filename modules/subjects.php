@@ -215,7 +215,7 @@ include '../includes/sidebar.php';
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px" id="iconPicker">
             <?php foreach($icons as $ii=>$ic):?>
             <span onclick="selectIcon(this,'<?=$ic?>')"
-              style="font-size:1.4rem;cursor:pointer;padding:6px;border-radius:8px;border:2px solid transparent;transition:all 0.15s;<?=$ii===0?'border-color:var(--primary);background:var(--primary-light)':''?>"
+              style="font-size:1.4rem;cursor:pointer;padding:6px;border-radius:var(--radius);border:2px solid transparent;transition:all 0.15s;<?=$ii===0?'border-color:var(--primary);background:var(--primary-light)':''?>"
               data-icon="<?=$ic?>"><?=$ic?></span>
             <?php endforeach;?>
           </div>
@@ -271,7 +271,7 @@ include '../includes/sidebar.php';
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px" id="editIconPicker">
             <?php foreach($icons as $ic):?>
             <span onclick="selectEditIcon('<?=$ic?>')" data-icon="<?=$ic?>"
-              style="font-size:1.4rem;cursor:pointer;padding:6px;border-radius:8px;border:2px solid transparent;transition:all 0.15s"><?=$ic?></span>
+              style="font-size:1.4rem;cursor:pointer;padding:6px;border-radius:var(--radius);border:2px solid transparent;transition:all 0.15s"><?=$ic?></span>
             <?php endforeach;?>
           </div>
           <input type="hidden" name="icon" id="editIconInput" value="">
