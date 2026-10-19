@@ -1,9 +1,9 @@
 <?php
 date_default_timezone_set('Asia/Manila');
-$host = "studimate.infinityfreeapp.com";
-$dbname = "if0_43217842_studimate_db";
-$username = "if0_43217842";
-$password = "passsahosting12";
+$host = "localhost";
+$dbname = "studimate_db";
+$username = "studimate_user";
+$password = " ";
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

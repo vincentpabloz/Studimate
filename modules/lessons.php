@@ -175,6 +175,7 @@ include '../includes/sidebar.php';
   <!-- ADD LESSON BUTTON -->
   <button class="btn btn-primary w-full mb-6"
           style="border-radius:var(--radius-sm);padding:13px;font-size:0.88rem"
+          type="button"
           onclick="openModal('addLessonModal')">
     <i class="fas fa-plus"></i> Add Lesson
   </button>
@@ -208,9 +209,6 @@ include '../includes/sidebar.php';
   <!-- TOPICS / LESSONS matching screenshot 3 -->
   <div class="section-header mb-4">
     <span class="section-title">Topics</span>
-    <button class="btn btn-accent-outline btn-sm btn-pill" onclick="openModal('addLessonModal')">
-      + Add
-    </button>
   </div>
 
   <div class="card mb-6">
@@ -291,7 +289,7 @@ include '../includes/sidebar.php';
         <div class="form-group">
           <label>Lesson Title *</label>
           <input type="text" name="title" class="form-control form-control-flat"
-               placeholder="e.g. Chapter 1: Introduction to Arrays" required maxlength="200" value="<?=htmlspecialchars($editLesson['title']??'')?>">
+               placeholder="e.g. Chapter 1: Introduction to Arrays" required maxlength="200" value="<?=htmlspecialchars($_POST['title']??$editLesson['title']??'')?>">
         </div>
         <?php if(!$editLesson):?>
         <div class="form-group">
@@ -302,7 +300,7 @@ include '../includes/sidebar.php';
           </div>
           <div id="lessonTextPanel">
             <textarea name="raw_text" id="lessonText" class="form-control" rows="7"
-                      placeholder="Paste lesson content here. You can request an explanation, quiz, or flashcards separately after saving." required></textarea>
+                      placeholder="Paste lesson content here. You can request an explanation, quiz, or flashcards separately after saving." required><?=htmlspecialchars($_POST['raw_text']??'')?></textarea>
           </div>
           <div id="lessonFilePanel" hidden>
             <label for="lessonMaterial">Study material <span style="color:var(--text-light);font-weight:400;font-size:0.72rem">(PDF, DOCX, PPT, PPTX; 20 MB max)</span></label>
@@ -325,7 +323,7 @@ include '../includes/sidebar.php';
         <div class="form-group">
           <label>Lesson Content *</label>
           <textarea name="raw_text" class="form-control" rows="7"
-                    placeholder="Edit lesson content here." required><?=htmlspecialchars($editLesson['raw_text']??'')?></textarea>
+                    placeholder="Edit lesson content here." required><?=htmlspecialchars($_POST['raw_text']??$editLesson['raw_text']??'')?></textarea>
           <div style="font-size:0.7rem;color:var(--text-light);margin-top:4px">
             <i class="fas fa-info-circle"></i> Changes create a new source version; cached outputs for older versions remain available only as history.
           </div>
@@ -344,7 +342,7 @@ include '../includes/sidebar.php';
 
 <script src="https://unpkg.com/lucide@1.56.0"></script>
 <?php
-$extraJs="lucide.createIcons();".($editLesson?"document.addEventListener('DOMContentLoaded',()=>openModal('addLessonModal'));":"
+$extraJs="lucide.createIcons();".(($editLesson||$err)?"document.addEventListener('DOMContentLoaded',()=>openModal('addLessonModal'));":"
 document.addEventListener('DOMContentLoaded',()=>{
   const form=document.getElementById('lessonForm');
   const textMode=document.getElementById('lessonTextMode');
