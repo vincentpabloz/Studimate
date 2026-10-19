@@ -22,6 +22,9 @@ $th='text-align:left;padding:8px 10px;font-size:0.72rem;color:var(--text-light);
 $td='padding:8px 10px;font-size:0.85rem;border-bottom:1px solid var(--border)';
 $fmt=fn($t)=>$t?date('M j, Y g:i A',strtotime($t)):'Never';
 
+$hour=(int)date('G');
+$greet=$hour<12?'Good morning':($hour<18?'Good afternoon':'Good evening');
+
 $pageTitle='Overview – StudiMate Admin';
 $topbarTitle='Overview';
 include '../includes/header.php';
@@ -29,6 +32,11 @@ include '../includes/admin_sidebar.php';
 ?>
 
 <div class="page-body">
+  <!-- GREETING BANNER -->
+  <div class="hero-banner hero-banner-compact mb-6">
+    <div class="hero-greeting"><?=$greet?>, Admin 👋</div>
+  </div>
+
   <?php if($failedChecks):?>
   <div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> <?=$failedChecks?> system check<?=$failedChecks===1?'':'s'?> need attention. <a href="admin_health.php" style="color:inherit;font-weight:600">Open System health</a></div>
   <?php endif;?>
