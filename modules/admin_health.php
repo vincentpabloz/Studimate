@@ -25,7 +25,7 @@ include '../includes/admin_sidebar.php';
       <h3>System health checks <?=$failedChecks?'<span class="badge badge-danger">'.$failedChecks.' to fix</span>':'<span class="badge badge-success">All good</span>'?></h3>
     </div>
     <div class="card-body">
-      <div class="grid-3 mb-4" style="grid-template-columns:repeat(3,1fr)">
+      <div class="admin-stats mb-4">
         <div class="analytics-stat"><div class="analytics-stat-val"><?=count($checks)?></div><div class="analytics-stat-label">Checks run</div></div>
         <div class="analytics-stat"><div class="analytics-stat-val" style="color:var(--success)"><?=$passed?></div><div class="analytics-stat-label">Passing</div></div>
         <div class="analytics-stat"><div class="analytics-stat-val" style="<?=$failedChecks?'color:var(--danger)':''?>"><?=$failedChecks?></div><div class="analytics-stat-label">Need attention</div></div>

@@ -45,7 +45,7 @@ include '../includes/admin_sidebar.php';
   <div class="card mb-4">
     <div class="card-header"><h3>Usage across the platform</h3></div>
     <div class="card-body">
-      <div class="grid-3 mb-4" style="grid-template-columns:repeat(4,1fr)">
+      <div class="admin-stats mb-4">
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$totals['students']?></div><div class="analytics-stat-label">Students</div></div>
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$totals['active30']?></div><div class="analytics-stat-label">Active in 30 days</div></div>
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$totals['quizzes']?></div><div class="analytics-stat-label">Quizzes taken</div></div>
@@ -63,7 +63,7 @@ include '../includes/admin_sidebar.php';
   <div class="card mb-4">
     <div class="card-header"><h3>Gemini usage (last 30 days)</h3></div>
     <div class="card-body">
-      <div class="grid-3 mb-4" style="grid-template-columns:repeat(3,1fr)">
+      <div class="admin-stats mb-4">
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$aiTotal?></div><div class="analytics-stat-label">New AI generations</div></div>
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$cacheTotal?></div><div class="analytics-stat-label">Reused from saved copies<?=$saveRate!==null?' ('.$saveRate.'%)':''?></div></div>
         <div class="analytics-stat"><div class="analytics-stat-val" style="<?=$errTotal?'color:var(--danger)':''?>"><?=$errTotal?></div><div class="analytics-stat-label">Failed requests</div></div>
@@ -98,7 +98,7 @@ include '../includes/admin_sidebar.php';
   <div class="card mb-4">
     <div class="card-header"><h3>Reminder emails</h3></div>
     <div class="card-body">
-      <div class="grid-3 mb-4" style="grid-template-columns:repeat(4,1fr)">
+      <div class="admin-stats mb-4">
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$reminders['opted_in']?> / <?=$reminders['students']?></div><div class="analytics-stat-label">Students opted in</div></div>
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$reminders['due_now']?></div><div class="analytics-stat-label">With reviews due now</div></div>
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$reminders['sent_30']?></div><div class="analytics-stat-label">Sent (30 days)</div></div>

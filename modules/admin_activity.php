@@ -29,7 +29,7 @@ include '../includes/admin_sidebar.php';
   <div class="card mb-4">
     <div class="card-header"><h3>Administrator activity log</h3></div>
     <div class="card-body">
-      <div class="grid-3 mb-4" style="grid-template-columns:repeat(4,1fr)">
+      <div class="admin-stats mb-4">
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$counts['total']?></div><div class="analytics-stat-label">Actions recorded</div></div>
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$counts['last30']?></div><div class="analytics-stat-label">Last 30 days</div></div>
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$counts['admins']?></div><div class="analytics-stat-label">Admins who acted</div></div>
@@ -49,7 +49,7 @@ include '../includes/admin_sidebar.php';
       </form>
 
       <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;min-width:680px">
+      <table class="rtable" style="width:100%;border-collapse:collapse">
         <thead><tr>
           <th style="<?=$th?>">Date and time</th><th style="<?=$th?>">Administrator</th>
           <th style="<?=$th?>">Action</th><th style="<?=$th?>">Affected account</th>
@@ -61,16 +61,16 @@ include '../includes/admin_sidebar.php';
         <?php foreach($log['rows'] as $r):
           $info=$r['type']?($types[$r['type']]??null):null;?>
           <tr>
-            <td style="<?=$td?>;white-space:nowrap"><?=htmlspecialchars($fmt($r['created_at']))?></td>
-            <td style="<?=$td?>">
+            <td data-label="When" style="<?=$td?>;white-space:nowrap"><?=htmlspecialchars($fmt($r['created_at']))?></td>
+            <td class="r-block" data-label="By" style="<?=$td?>">
               <?php if($r['admin_name']):?><strong><?=htmlspecialchars($r['admin_name'])?></strong><?=$r['admin_email']?'<br><span class="text-muted">'.htmlspecialchars($r['admin_email']).'</span>':''?>
               <?php else:?><span class="text-muted">Removed admin</span><?php endif;?>
             </td>
-            <td style="<?=$td?>">
+            <td data-label="Action" style="<?=$td?>">
               <?php if($info):?><span class="badge <?=$info['badge']?>"><?=htmlspecialchars($info['label'])?></span>
               <?php else:?><?=htmlspecialchars((string)$r['message'])?><?php endif;?>
             </td>
-            <td style="<?=$td?>">
+            <td class="r-block" data-label="Affected account" style="<?=$td?>">
               <?php if($r['target']):?><strong><?=htmlspecialchars($r['target']['name'])?></strong><?=$r['target']['email']!==''?'<br><span class="text-muted">'.htmlspecialchars($r['target']['email']).'</span>':''?>
               <?php else:?><span class="text-muted">–</span><?php endif;?>
             </td>

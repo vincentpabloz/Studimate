@@ -132,7 +132,7 @@ include '../includes/admin_sidebar.php';
   <?php if($error):?><div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> <?=htmlspecialchars($error)?></div><?php endif;?>
   <?php if($notice):?><div class="alert alert-success"><i class="fas fa-check-circle"></i> <?=htmlspecialchars($notice)?></div><?php endif;?>
 
-  <div class="grid-3 mb-4" style="grid-template-columns:repeat(4,1fr)">
+  <div class="admin-stats mb-4">
     <div class="analytics-stat"><div class="analytics-stat-val"><?=$counts['total']?></div><div class="analytics-stat-label">Total accounts</div></div>
     <div class="analytics-stat"><div class="analytics-stat-val"><?=$counts['active']?></div><div class="analytics-stat-label">Active</div></div>
     <div class="analytics-stat"><div class="analytics-stat-val" style="<?=$counts['deactivated']?'color:var(--danger)':''?>"><?=$counts['deactivated']?></div><div class="analytics-stat-label">Deactivated</div></div>
@@ -158,7 +158,7 @@ include '../includes/admin_sidebar.php';
         <?php if($q!==''||$roleF!==''||$statusF!==''):?><a href="admin_users.php" class="btn btn-outline btn-sm" style="width:auto;text-decoration:none">Clear</a><?php endif;?>
       </form>
       <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;min-width:720px">
+      <table class="rtable" style="width:100%;border-collapse:collapse">
         <thead><tr>
           <th style="<?=$th?>">Account</th><th style="<?=$th?>">Role</th><th style="<?=$th?>">Status</th>
           <th style="<?=$th?>">Last login</th><th style="<?=$th?>">Joined</th><th style="<?=$th?>">Actions</th>
@@ -171,11 +171,11 @@ include '../includes/admin_sidebar.php';
           $isSelf=(int)$u['id']===$adminId;$isAdmin=$u['role']==='admin';$active=(bool)$u['is_active'];?>
           <tr>
             <td style="<?=$td?>"><strong><?=htmlspecialchars($u['name'])?></strong><?=$isSelf?' <span class="badge badge-blue">You</span>':''?><br><span class="text-muted"><?=htmlspecialchars($u['email'])?></span></td>
-            <td style="<?=$td?>"><span class="badge <?=$isAdmin?'badge-primary':'badge-blue'?>"><?=$isAdmin?'Admin':'Student'?></span></td>
-            <td style="<?=$td?>"><span class="badge <?=$active?'badge-success':'badge-danger'?>"><?=$active?'Active':'Deactivated'?></span></td>
-            <td style="<?=$td?>"><?=htmlspecialchars($fmt($u['last_login_at']))?></td>
-            <td style="<?=$td?>"><?=htmlspecialchars($fmt($u['created_at']))?></td>
-            <td style="<?=$td?>">
+            <td data-label="Role" style="<?=$td?>"><span class="badge <?=$isAdmin?'badge-primary':'badge-blue'?>"><?=$isAdmin?'Admin':'Student'?></span></td>
+            <td data-label="Status" style="<?=$td?>"><span class="badge <?=$active?'badge-success':'badge-danger'?>"><?=$active?'Active':'Deactivated'?></span></td>
+            <td data-label="Last login" style="<?=$td?>"><?=htmlspecialchars($fmt($u['last_login_at']))?></td>
+            <td data-label="Joined" style="<?=$td?>"><?=htmlspecialchars($fmt($u['created_at']))?></td>
+            <td class="r-actions" style="<?=$td?>">
               <?php if($active):?><?=actionForm($csrfToken,(int)$u['id'],'reset','Send reset link','btn-outline')?><?php endif;?>
               <?php if(!$isSelf):?>
                 <?php if($active):?><?=actionForm($csrfToken,(int)$u['id'],'deactivate','Deactivate','btn-danger','Deactivate this account? The person will no longer be able to sign in.')?>

@@ -24,7 +24,7 @@ include '../includes/admin_sidebar.php';
   <div class="card mb-4">
     <div class="card-header"><h3>Student activity (last <?=$days?> days)</h3></div>
     <div class="card-body">
-      <div class="grid-3 mb-4" style="grid-template-columns:repeat(2,1fr)">
+      <div class="admin-stats mb-4">
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$sum['quizzes']?></div><div class="analytics-stat-label">Quizzes taken</div></div>
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$sum['peak_active']?></div><div class="analytics-stat-label">Most active students in one day</div></div>
       </div>
@@ -39,7 +39,7 @@ include '../includes/admin_sidebar.php';
   <div class="card mb-4">
     <div class="card-header"><h3>Gemini requests and saved copies (last <?=$days?> days)</h3></div>
     <div class="card-body">
-      <div class="grid-3 mb-4" style="grid-template-columns:repeat(4,1fr)">
+      <div class="admin-stats mb-4">
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$sum['ai_new']?></div><div class="analytics-stat-label">New AI generations</div></div>
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$sum['ai_reused']?></div><div class="analytics-stat-label">Reused from saved copies</div></div>
         <div class="analytics-stat"><div class="analytics-stat-val"><?=$sum['reuse_pct']!==null?$sum['reuse_pct'].'%':'–'?></div><div class="analytics-stat-label">Of requests avoided Gemini</div></div>
