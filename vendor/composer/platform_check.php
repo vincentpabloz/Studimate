@@ -4,6 +4,10 @@
 
 $issues = array();
 
+if (!(PHP_VERSION_ID >= 80100)) {
+    $issues[] = 'Your Composer dependencies require a PHP version ">= 8.1.0". You are running ' . PHP_VERSION . '.';
+}
+
 $missingExtensions = array();
 extension_loaded('ctype') || $missingExtensions[] = 'ctype';
 extension_loaded('filter') || $missingExtensions[] = 'filter';
@@ -27,7 +31,8 @@ if ($issues) {
             echo 'Composer detected issues in your platform:' . PHP_EOL.PHP_EOL . str_replace('You are running '.PHP_VERSION.'.', '', implode(PHP_EOL, $issues)) . PHP_EOL.PHP_EOL;
         }
     }
-    throw new \RuntimeException(
-        'Composer detected issues in your platform: ' . implode(' ', $issues)
+    trigger_error(
+        'Composer detected issues in your platform: ' . implode(' ', $issues),
+        E_USER_ERROR
     );
 }

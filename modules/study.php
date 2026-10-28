@@ -74,7 +74,7 @@ include '../includes/sidebar.php';
       <h2 style="font-size:1.15rem;margin:0;color:var(--text-dark)"><?=htmlspecialchars($lesson['title'])?></h2>
       <div class="study-output-tabs" role="tablist" aria-label="Lesson study materials" style="display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:14px;margin-top:16px">
         <?php foreach ($tabs as $key => $label): ?>
-        <button type="button" id="study-tab-<?=$key?>" class="btn btn-outline btn-pill btn-sm" role="tab" aria-controls="study-panel-<?=$key?>" aria-selected="<?=$activeTab === $key ? 'true' : 'false'?>" onclick="showStudyTab('<?=$key?>')" style="width:auto;<?=$activeTab === $key ? 'background:var(--primary);color:#fff;border-color:var(--primary)' : ''?>">
+        <button type="button" id="study-tab-<?=$key?>" class="btn btn-outline btn-pill btn-sm" role="tab" aria-controls="study-panel-<?=$key?>" aria-selected="<?=$activeTab === $key ? 'true' : 'false'?>" onclick="showStudyTab('<?=$key?>')" style="width:auto">
           <?=htmlspecialchars($label)?>
         </button>
         <?php endforeach; ?>
@@ -200,7 +200,7 @@ include '../includes/sidebar.php';
 $quizJson = json_encode($quizQuestions, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
 $flashcardCount = count($flashcards);
 $quizStatusJson = json_encode($quizStatus, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
-$extraJs = 'window.showStudyTab=function(key){["file","explanation","quiz","flashcard"].forEach(function(name){var tab=document.getElementById("study-tab-"+name);var panel=document.getElementById("study-panel-"+name);var active=name===key;if(tab){tab.setAttribute("aria-selected",active?"true":"false");tab.style.background=active?"var(--primary)":"";tab.style.color=active?"#fff":"";tab.style.borderColor=active?"var(--primary)":"";}if(panel)panel.style.display=active?"block":"none";});history.replaceState(null,"","study.php?lesson_id='. $lessonId .'&tab="+encodeURIComponent(key));};';
+$extraJs = 'window.showStudyTab=function(key){["file","explanation","quiz","flashcard"].forEach(function(name){var tab=document.getElementById("study-tab-"+name);var panel=document.getElementById("study-panel-"+name);var active=name===key;if(tab)tab.setAttribute("aria-selected",active?"true":"false");if(panel)panel.style.display=active?"block":"none";});history.replaceState(null,"","study.php?lesson_id='. $lessonId .'&tab="+encodeURIComponent(key));};';
 if ($quizQuestions || $flashcards) {
     $extraJs .= 'initStudyModal('.($quizJson ?: '[]').','.($quizStatusJson ?: '{"attempts":[],"latest":null,"eligible":true}').','.$flashcardCount.','. $lessonId .','
         .json_encode($csrfToken, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT).');';

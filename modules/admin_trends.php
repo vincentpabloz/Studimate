@@ -67,7 +67,7 @@ include '../includes/admin_sidebar.php';
     scales:{y:{beginAtZero:true,grid:{color:'#F3F4F6'},ticks:{precision:0,font:{size:11}}},x:{grid:{display:false},ticks:{font:{size:11},maxRotation:0,autoSkip:true,maxTicksLimit:10}}}};
   function ds(label,data,color,dashed){return {label:label,data:data,borderColor:color,backgroundColor:color,borderWidth:2.5,tension:0.35,pointRadius:2,fill:false,borderDash:dashed?[6,4]:[]};}
   new Chart(document.getElementById('activityChart'),{type:'line',data:{labels:labels,datasets:[
-    ds('Quizzes taken',<?=$chartJson($series['quizzes'])?>,'#5B5FDE'),
+    ds('Quizzes taken',<?=$chartJson($series['quizzes'])?>,'#60A5FA'),
     ds('Active students',<?=$chartJson($series['active'])?>,'#10B981')
   ]},options:opts});
   new Chart(document.getElementById('aiChart'),{type:'line',data:{labels:labels,datasets:[

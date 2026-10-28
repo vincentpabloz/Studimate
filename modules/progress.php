@@ -179,7 +179,7 @@ include '../includes/sidebar.php';
 <script>
 new Chart(document.getElementById('trendChart'),{
   type:'line',
-  data:{labels:<?=$tLabels?>,datasets:[{label:'Avg Score %',data:<?=$tVals?>,borderColor:'#5B5FDE',backgroundColor:'rgba(91,95,222,0.08)',borderWidth:2.5,fill:true,tension:0.4,pointBackgroundColor:'#5B5FDE',pointRadius:4}]},
+  data:{labels:<?=$tLabels?>,datasets:[{label:'Avg Score %',data:<?=$tVals?>,borderColor:'#60A5FA',backgroundColor:'rgba(96,165,250,0.12)',borderWidth:2.5,fill:true,tension:0.4,pointBackgroundColor:'#60A5FA',pointRadius:4}]},
   options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,grid:{color:'#F3F4F6'},ticks:{callback:v=>v+'%',font:{size:11}}},x:{grid:{display:false},ticks:{font:{size:11}}}}}
 });
 </script>
@@ -188,7 +188,7 @@ new Chart(document.getElementById('trendChart'),{
 <script>
 new Chart(document.getElementById('subChart'),{
   type:'bar',
-  data:{labels:<?=$sLabels?>,datasets:[{label:'Avg %',data:<?=$sVals?>,backgroundColor:'#5B5FDE',borderRadius:6,borderSkipped:false}]},
+  data:{labels:<?=$sLabels?>,datasets:[{label:'Avg %',data:<?=$sVals?>,backgroundColor:'#A78BFA',borderRadius:6,borderSkipped:false}]},
   options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{min:0,max:100,grid:{color:'#F3F4F6'},ticks:{callback:v=>v,font:{size:11}}},x:{grid:{display:false},ticks:{font:{size:11}}}}}
 });
 </script>

@@ -26,7 +26,7 @@ try{
     foreach($sq->fetchAll() as $r)$given[$r['item_key']]=(int)$r['score'];
   }
 }catch(PDOException $e){
-  $error='The evaluation tables are missing. Ask the administrator to run database/migrate_admin.php.';
+  $error='The evaluation tables are missing. Ask the administrator to run database/migrations/migrate_admin.php.';
 }
 
 if($_SERVER['REQUEST_METHOD']==='POST'&&!$error){

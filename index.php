@@ -56,11 +56,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StudiMate – Log In</title>
-<link rel="stylesheet" href="assets/css/style.css">
+<script src="assets/js/theme.js?v=<?=filemtime(__DIR__ . '/assets/js/theme.js')?>"></script>
+<link rel="stylesheet" href="assets/css/style.css?v=<?=filemtime(__DIR__ . '/assets/css/style.css')?>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 <div class="auth-page">
+  <button type="button" class="theme-toggle theme-toggle-floating" data-theme-toggle aria-label="Switch to dark mode" title="Switch to dark mode" aria-pressed="false">
+    <span data-theme-icon aria-hidden="true">☾</span>
+    <span data-theme-label>Dark mode</span>
+  </button>
   <!-- BRAND -->
   <div class="auth-brand">
     <div class="auth-brand-icon"><i class="fas fa-book-open" aria-hidden="true"></i></div>

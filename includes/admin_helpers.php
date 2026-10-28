@@ -30,9 +30,9 @@ function requireAdmin(PDO $pdo): int
     $user = $query->fetch();
     if (!$user || $user['role'] !== 'admin' || !(int)$user['is_active']) {
         http_response_code(403);
-        echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Access denied</title><link rel="stylesheet" href="../assets/css/style.css"></head>'
-            . '<body><div style="max-width:420px;margin:15vh auto;text-align:center;font-family:sans-serif"><h2>Administrator access only</h2>'
-            . '<p>Your account does not have permission to open this page.</p><p><a href="../dashboard.php">Back to dashboard</a></p></div></body></html>';
+        echo '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Access denied</title><link rel="stylesheet" href="../assets/css/style.css?v=' . filemtime(__DIR__ . '/../assets/css/style.css') . '"></head>'
+            . '<body><div class="auth-page"><div class="auth-card" style="max-width:420px;text-align:center"><h2>Administrator access only</h2>'
+            . '<p>Your account does not have permission to open this page.</p><p><a href="../dashboard.php">Back to dashboard</a></p></div></div></body></html>';
         exit;
     }
     return (int)$_SESSION['user_id'];

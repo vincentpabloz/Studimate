@@ -7,7 +7,7 @@ $uid=$_SESSION['user_id'];$base='../';
 $csrfToken=$_SESSION['csrf_token']??bin2hex(random_bytes(32));
 $_SESSION['csrf_token']=$csrfToken;
 
-$colors=['#5B5FDE','#22C55E','#EF4444','#F59E0B','#8B5CF6','#06B6D4','#EC4899','#F97316'];
+$colors=['#60A5FA','#34D399','#FB7185','#FBBF24','#A78BFA','#67E8F9','#F472B6','#FB923C'];
 $icons=['📘','📗','📕','📙','📓','📔','📐','🔬','🌍','💻','📊','🎨'];
 
 $err='';$pageErr='';$openModal='';

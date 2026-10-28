@@ -12,7 +12,6 @@ $_adminItems = [
     'admin_profile.php'    => ['Profile',            'fa-user'],
 ];
 ?>
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="app-layout">
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
@@ -45,11 +44,13 @@ $_adminItems = [
 
 <div class="main-content">
 <div class="topbar">
-  <div class="flex items-center gap-2">
-    <button class="hamburger" id="hamburger"><i class="fas fa-bars"></i></button>
-    <span class="topbar-title"><?= htmlspecialchars($topbarTitle ?? 'Administrator') ?></span>
+<div class="flex items-center gap-2">
+  <span class="topbar-title"><?= htmlspecialchars($topbarTitle ?? 'Administrator') ?></span>
   </div>
   <div class="topbar-right">
+    <button type="button" class="topbar-icon-btn topbar-theme-toggle theme-toggle" data-theme-toggle aria-label="Switch to dark mode" title="Switch to dark mode" aria-pressed="false">
+      <span data-theme-icon aria-hidden="true">☾</span>
+    </button>
     <a href="<?= $base ?? '' ?>modules/admin_profile.php" class="topbar-avatar" title="Profile"><?= htmlspecialchars($_adminInitial) ?></a>
   </div>
 </div>

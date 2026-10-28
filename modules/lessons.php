@@ -162,7 +162,7 @@ include '../includes/sidebar.php';
   </a>
 
   <!-- SUBJECT HERO matching screenshot 3 -->
-  <div class="subject-hero" style="background:linear-gradient(135deg,<?=htmlspecialchars($sub['color'])?>,<?=htmlspecialchars($sub['color'])?>cc)">
+  <div class="subject-hero" style="--subject-color:<?=htmlspecialchars($sub['color'])?>">
     <div class="subject-hero-code"><?=htmlspecialchars($sub['subject_code']??'')?></div>
     <div class="subject-hero-name"><?=htmlspecialchars($sub['subject_name'])?></div>
     <div class="subject-hero-meta"><?=count($lessonList)?> lesson<?=count($lessonList)!=1?'s':''?> &middot; <?=$pct?>% done &middot; <?=$improvedCount?> improved since first attempt</div>
@@ -269,9 +269,9 @@ include '../includes/sidebar.php';
 </div>
 
 <!-- ADD LESSON MODAL -->
-<div class="modal-overlay" id="addLessonModal">
-  <div class="modal-box" style="max-width:560px">
-    <div class="modal-header">
+<div class="modal-overlay lesson-modal-overlay" id="addLessonModal">
+  <div class="modal-box lesson-modal">
+    <div class="modal-header lesson-modal-header">
       <h3><?=$editLesson?'Edit Lesson':'Add Lesson'?></h3>
       <button class="modal-close" onclick="closeModal('addLessonModal')"><i class="fas fa-times"></i></button>
     </div>
@@ -304,9 +304,8 @@ include '../includes/sidebar.php';
           </div>
           <div id="lessonFilePanel" hidden>
             <label for="lessonMaterial">Study material <span style="color:var(--text-light);font-weight:400;font-size:0.72rem">(PDF, DOCX, PPT, PPTX; 20 MB max)</span></label>
-            <div id="lessonDropZone" tabindex="0" role="button" aria-controls="lessonMaterial" aria-label="Choose a study material file or drag and drop it here"
-                 style="border:2px dashed var(--border);border-radius:var(--radius-sm);padding:22px 14px;text-align:center;cursor:pointer;color:var(--text-mid);">
-              <i class="fas fa-cloud-upload-alt" style="font-size:1.4rem;margin-bottom:8px;color:var(--primary)"></i>
+            <div id="lessonDropZone" class="lesson-drop-zone" tabindex="0" role="button" aria-controls="lessonMaterial" aria-label="Choose a study material file or drag and drop it here">
+              <i class="fas fa-cloud-upload-alt lesson-drop-icon"></i>
               <div id="lessonFilePrompt">Drag and drop a file here, or <span style="color:var(--primary);font-weight:600;text-decoration:underline">browse files</span></div>
               <div style="font-size:0.72rem;color:var(--text-light);margin-top:5px">PDF, DOCX, PPT, or PPTX · up to 20 MB</div>
               <div id="lessonFileName" aria-live="polite" style="font-size:0.78rem;font-weight:600;margin-top:8px"></div>
@@ -385,8 +384,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   fileInput.addEventListener('change',()=>{fileName.textContent=fileInput.files[0]?.name||'';});
   dropZone.addEventListener('click',()=>fileInput.click());
   dropZone.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();fileInput.click();}});
-  ['dragenter','dragover'].forEach(type=>dropZone.addEventListener(type,event=>{event.preventDefault();dropZone.style.borderColor='var(--primary)';}));
-  ['dragleave','drop'].forEach(type=>dropZone.addEventListener(type,event=>{event.preventDefault();dropZone.style.borderColor='var(--border)';}));
+  ['dragenter','dragover'].forEach(type=>dropZone.addEventListener(type,event=>{event.preventDefault();dropZone.classList.add('drag-active');}));
+  ['dragleave','drop'].forEach(type=>dropZone.addEventListener(type,event=>{event.preventDefault();dropZone.classList.remove('drag-active');}));
   dropZone.addEventListener('drop',event=>showFile(event.dataTransfer.files[0]));
 });
 ");

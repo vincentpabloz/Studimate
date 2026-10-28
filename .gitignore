@@ -1,2 +1,4 @@
 /.env
 .vs/
+/uploads/*
+!/uploads/.htaccess

@@ -13,7 +13,6 @@ if(isset($pdo,$_SESSION['user_id'])){
   if($_pref!==false&&!(int)$_pref)$_notifCount=0;
 }
 ?>
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
 <div class="app-layout">
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
@@ -80,11 +79,13 @@ if(isset($pdo,$_SESSION['user_id'])){
 
 <div class="main-content">
 <div class="topbar">
-  <div class="flex items-center gap-2">
-    <button class="hamburger" id="hamburger"><i class="fas fa-bars"></i></button>
-    <span class="topbar-title"><?=$topbarTitle??'Dashboard'?></span>
+<div class="flex items-center gap-2">
+  <span class="topbar-title"><?=$topbarTitle??'Dashboard'?></span>
   </div>
   <div class="topbar-right">
+    <button type="button" class="topbar-icon-btn topbar-theme-toggle theme-toggle" data-theme-toggle aria-label="Switch to dark mode" title="Switch to dark mode" aria-pressed="false">
+      <span data-theme-icon aria-hidden="true">☾</span>
+    </button>
     <button class="topbar-icon-btn" onclick="window.location='<?=$base??''?>modules/schedule.php'" title="Reviews due">
       <i class="fas fa-bell"></i>
       <?php if($_notifCount>0):?><span class="notif-badge"><?=$_notifCount?></span><?php endif;?>

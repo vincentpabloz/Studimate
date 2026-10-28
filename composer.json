@@ -8,6 +8,9 @@
     "phpmailer/phpmailer": "^7.1",
     "smalot/pdfparser": "^2.11"
   },
+  "autoload": {
+    "classmap": ["classes/"]
+  },
   "config": {
     "platform-check": true,
     "sort-packages": true

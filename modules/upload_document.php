@@ -10,7 +10,7 @@ require '../includes/document_extractor.php';
 
 $uid = (int)$_SESSION['user_id'];
 $subjectId = (int)($_POST['subject_id'] ?? 0);
-$storageRoot = getenv('STUDIMATE_PRIVATE_STORAGE') ?: dirname(__DIR__) . DIRECTORY_SEPARATOR . 'private-document-storage';
+$storageRoot = getenv('STUDIMATE_PRIVATE_STORAGE') ?: dirname(__DIR__) . DIRECTORY_SEPARATOR . 'uploads';
 $storedPath = null;
 
 function uploadError(string $message, int $subjectId)
@@ -98,11 +98,11 @@ if (in_array($extension, ['docx', 'pptx'], true)) {
 
 if (!is_dir($storageRoot) && !mkdir($storageRoot, 0700, true) && !is_dir($storageRoot)) {
     error_log('Unable to create private document storage directory: ' . $storageRoot);
-    uploadError('Document storage is unavailable. Configure STUDIMATE_PRIVATE_STORAGE as a writable private directory or allow PHP to create private-document-storage.', $subjectId);
+    uploadError('Document storage is unavailable. Configure STUDIMATE_PRIVATE_STORAGE as a writable private directory or allow PHP to create uploads.', $subjectId);
 }
 if (!is_writable($storageRoot)) {
     error_log('Private document storage directory is not writable: ' . $storageRoot);
-    uploadError('Document storage is not writable. Configure STUDIMATE_PRIVATE_STORAGE as a writable private directory or grant PHP write access to private-document-storage.', $subjectId);
+    uploadError('Document storage is not writable. Configure STUDIMATE_PRIVATE_STORAGE as a writable private directory or grant PHP write access to uploads.', $subjectId);
 }
 $randomName = bin2hex(random_bytes(24)) . '.' . $extension;
 $storedPath = $storageRoot . DIRECTORY_SEPARATOR . $randomName;

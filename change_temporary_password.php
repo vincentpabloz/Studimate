@@ -42,10 +42,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StudiMate – Change Password</title>
-<link rel="stylesheet" href="assets/css/style.css">
+<script src="assets/js/theme.js?v=<?=filemtime(__DIR__ . '/assets/js/theme.js')?>"></script>
+<link rel="stylesheet" href="assets/css/style.css?v=<?=filemtime(__DIR__ . '/assets/css/style.css')?>">
 </head>
 <body>
 <div class="auth-page">
+  <button type="button" class="theme-toggle theme-toggle-floating" data-theme-toggle aria-label="Switch to dark mode" title="Switch to dark mode" aria-pressed="false">
+    <span data-theme-icon aria-hidden="true">☾</span>
+    <span data-theme-label>Dark mode</span>
+  </button>
   <div class="auth-brand"><h1>StudiMate</h1></div>
   <div class="auth-card">
     <div class="auth-card-title">Choose a new password</div>
